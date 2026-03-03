@@ -255,49 +255,28 @@ function buildHourlyGrid() {
   if (!grid) return;
 
   grid.innerHTML = '';
-
   if (!selectedHour) return;
 
-  const etNow = getETNow(); // determine if it should switch to tomorrow
-  const lastCutoff = new Date(etNow);
+  const etNow = getETNow();
+  const lastCutoff = new Date(etNow); // last cutoff of day
   lastCutoff.setHours(19, 0, 0, 0);
   lastCutoff.setMinutes(lastCutoff.getMinutes() - 30);
+
   const useTomorrow = etNow >= lastCutoff;
+  const hourNum = convertHourLabel(selectedHour);
+
+  const etCutoff = new Date(etNow); // ET-based cutoff for selected hour
+  etCutoff.setHours(hourNum, 0, 0, 0);
+  etCutoff.setMinutes(etCutoff.getMinutes() - 30);
 
   cities.forEach(city => {
 
-    const hourNum = convertHourLabel(selectedHour);
     const localLabel = convertETToCityHourLabel(hourNum, city.timezone);
 
-    const now = new Date();
-    const localNow = new Date(
-      now.toLocaleString("en-US", { timeZone: city.timezone })
-    );
-
-    const baseDate = new Date(localNow); // base date for cutoff
-    if (useTomorrow) {
-      baseDate.setDate(baseDate.getDate() + 1);
-    }
-
-    const cutoff = new Date(baseDate);
-    cutoff.setHours(hourNum, 0, 0, 0);
-    cutoff.setMinutes(cutoff.getMinutes() - 30);
+    const isPastCutoff = useTomorrow ? false : etNow >= etCutoff; // disable only if forecasting today and past ET cutoff
 
     const card = document.createElement('div');
     card.className = 'city-card expanded';
-    
-    const etNow = getETNow();
-    
-    const etCutoff = new Date(etNow); // build ET cutoff
-    etCutoff.setHours(hourNum, 0, 0, 0);
-    etCutoff.setMinutes(etCutoff.getMinutes() - 30);
-    
-    const lastCutoff = new Date(etNow); // tomorrow mode after cutoff time
-    lastCutoff.setHours(19, 0, 0, 0);
-    lastCutoff.setMinutes(lastCutoff.getMinutes() - 30);
-    
-    const useTomorrow = etNow >= lastCutoff;   
-    const isPastCutoff = useTomorrow ? false : etNow >= etCutoff; // open all cities after today ET cutoff
 
     card.innerHTML = `
       <div class="city-card-header">${city.name}</div>
