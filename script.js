@@ -70,7 +70,7 @@ async function loadCities() {
   updateCurrentDate();
 }
 
-// Update PST label
+// Update PT label
 
 function updateCurrentDate() {
   const dateDisplay = document.getElementById('currentDate');
@@ -172,11 +172,6 @@ async function buildDailyGrid() {
       prevGuess.high !== undefined || prevGuess.low !== undefined;
 
     // Cutoff check
-    const now = new Date();
-    const localNow = new Date(
-      now.toLocaleString("en-US", { timeZone: city.timezone })
-    );
-
     const pstNow = getPSTNow(); // get PT game date
     const pstGameDate = new Date(pstNow);
     pstGameDate.setHours(0, 0, 0, 0);
