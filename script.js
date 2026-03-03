@@ -287,9 +287,6 @@ function buildHourlyGrid() {
 
     const card = document.createElement('div');
     card.className = 'city-card expanded';
-
-    const hourNum = convertHourLabel(selectedHour);
-    const localLabel = convertETToCityHourLabel(hourNum, city.timezone);
     
     const etNow = getETNow();
     
