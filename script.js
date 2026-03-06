@@ -105,6 +105,7 @@ function updateCurrentDate() {
   if (!dateDisplay || !forecastDaySelect) return; // guard clause
   
   const now = new Date();
+  
   const pstNow = new Date(
     now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
   );
@@ -531,7 +532,7 @@ if (hourlyForm) {
         date: getCityLocalDateISO(city.timezone, useTomorrow ? 1 : 0),
         hour: hourNum,
         temp: Number(val),
-        user_id: user_id
+        user_id: userId
       });
     });
 
