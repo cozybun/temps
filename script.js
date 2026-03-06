@@ -405,7 +405,7 @@ if (dailyForm) {
       if (!entry) {
         entry = {
           city_id: cityId,
-          city = city.name,
+          city: city.name,
           date:
             forecastDay === 'today'
               ? getCityLocalDateISO(city.timezone, 0)
@@ -474,7 +474,7 @@ if (hourlyForm) {
       const val = input.value.trim();
       if (!val) return;
 
-      // If forecasting today AND past ET cutoff → block
+      // block if forecasting today & past ET cutoff
       if (!useTomorrow && etNow >= etCutoff) {
         blocked = true;
         return;
@@ -485,10 +485,11 @@ if (hourlyForm) {
 
       payload.push({
         city_id: cityId,
+        city: city.name,
         date: getCityLocalDateISO(city.timezone, useTomorrow ? 1 : 0),
         hour: hourNum,
         temp: Number(val),
-        user_id: 1
+        user_id: "11111111-1111-1111-1111-111111111111"
       });
     });
 
