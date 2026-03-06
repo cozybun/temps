@@ -405,6 +405,7 @@ if (dailyForm) {
       if (!entry) {
         entry = {
           city_id: cityId,
+          city = city.name,
           date:
             forecastDay === 'today'
               ? getCityLocalDateISO(city.timezone, 0)
