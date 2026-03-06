@@ -105,6 +105,18 @@ function updateCurrentDate() {
   if (!dateDisplay || !forecastDaySelect) return; // guard clause
   
   const now = new Date();
+  const pstNow = new Date(
+    now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+  );
+
+  const advanceCutoff = new Date(pstNow);
+  cutoff.setHours(12, 0, 0, 0);
+
+  const forecastDaySelect = document.getElementById('forecastDay');
+
+  if (pstNow >= advanceCutoff && forecastDaySelect.value === "today") {
+    forecastDaySelect.value = "tomorrow";
+  }
 
   const pstToday = now.toLocaleDateString("en-US", {
     timeZone: "America/Los_Angeles",
