@@ -4,26 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Temps App</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="style.css"/>
 </head>
+
 <body>
 
   <div style="text-align:center;margin:1rem 0;">
     <a href="index.html">
-      <button>← Back to Daily</button>
+      <button type="button">← Back to Daily</button>
     </a>
   </div>
 
-  <h1>Hourly Forecasts</h1>
+  <h1 style="text-align:center;">Hourly Forecasts</h1>
+
   <p style="text-align:center;">
     Cutoff = 30 mins before each hour (local time)
   </p>
 
-  <!-- Hour Selector Row -->
+  <!-- Hour Selector -->
   <div id="hourSelector" class="hour-selector"></div>
 
+  <!-- Forecast Form -->
   <form id="hourlyForm">
+
     <div id="hourlyGrid" class="city-grid"></div>
 
     <div style="text-align:center;margin:2rem 0;">
@@ -31,10 +36,13 @@
         Select an Hour
       </button>
     </div>
+
   </form>
 
-  <div id="status"></div>
+  <!-- Status Messages -->
+  <div id="status" style="text-align:center;margin-top:1rem;"></div>
 
   <script src="script.js"></script>
+
 </body>
 </html>
