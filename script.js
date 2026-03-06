@@ -477,8 +477,14 @@ const hourlyForm = document.getElementById('hourlyForm');
 if (hourlyForm) {
   hourlyForm.addEventListener('submit', async e => {
     e.preventDefault();
+    console.log("selectedHour:", selectedHour);
+    console.log("userId:", userId);
 
-    if (!selectedHour) return;
+    if (!selectedHour) {
+      document.getElementById('status').innerHTML =
+        '<span style="color:red;">Select an hour first.</span>';
+      return;
+    }
 
     const payload = [];
     let blocked = false;
