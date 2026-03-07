@@ -166,7 +166,7 @@ async function loadDailyData() {
     .gte('date', minDate)
     .lte('date', maxDate);
 
-  return { actuals: actuals || [], guesses: guesses || [] hourlyGuesses: hourlyGuesses || [] };
+  return { actuals: actuals || [], guesses: guesses || [], hourlyGuesses: hourlyGuesses || [] };
 }
 
 // Build grid
