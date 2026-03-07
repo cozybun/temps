@@ -96,45 +96,45 @@ async function loadCities() {
   updateCurrentDate();
 }
 
-// Update PT label
+// Update current date label
 
 function updateCurrentDate() {
+
   const dateDisplay = document.getElementById('currentDate');
   const forecastDaySelect = document.getElementById('forecastDay');
-  
-  if (!dateDisplay || !forecastDaySelect) return; // guard clause
-  
+
+  if (!dateDisplay || !forecastDaySelect) return;
+
   const now = new Date();
-  
+
   const pstNow = new Date(
     now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-  );
+  ); // current PT
 
-  const advanceCutoff = new Date(pstNow);
-  cutoff.setHours(12, 0, 0, 0);
-  
-  if (pstNow >= advanceCutoff && forecastDaySelect.value === "today") {
+  const pstCutoff = new Date(pstNow); // noon PT cutoff
+  pstCutoff.setHours(12, 0, 0, 0);
+
+  if (pstNow >= pstCutoff && forecastDaySelect.value === "today") {
     forecastDaySelect.value = "tomorrow";
-  }
+  } // auto-switch dropdown after noon PT
 
-  const pstToday = now.toLocaleDateString("en-US", {
-    timeZone: "America/Los_Angeles",
+  const pstToday = pstNow.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric"
-  });
+  }); // build display dates
 
-  const tomorrow = new Date(now.getTime() + 86400000);
+  const tomorrow = new Date(pstNow);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
   const pstTomorrow = tomorrow.toLocaleDateString("en-US", {
-    timeZone: "America/Los_Angeles",
     month: "long",
     day: "numeric"
   });
 
-  const forecastDay = document.getElementById('forecastDay').value;
-
   dateDisplay.textContent =
-    forecastDay === 'today' ? pstToday : pstTomorrow;
+    forecastDaySelect.value === "today"
+      ? pstToday
+      : pstTomorrow;
 }
 
 // Load data in safe window
