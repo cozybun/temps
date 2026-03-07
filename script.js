@@ -154,7 +154,7 @@ async function loadDailyData() {
     .eq('user_id', userId);
   
   const { data: actuals } = await client
-    .from('hourly_actuals')
+    .from('daily_actuals')
     .select('city_id, temp, date')
     .gte('date', minDate)
     .lte('date', maxDate);
@@ -166,7 +166,7 @@ async function loadDailyData() {
     .gte('date', minDate)
     .lte('date', maxDate);
 
-  return { actuals: actuals || [], guesses: guesses || [] };
+  return { actuals: actuals || [], guesses: guesses || [] hourlyGuesses: hourlyGuesses || [] };
 }
 
 // Build grid
@@ -306,6 +306,7 @@ function buildHourSelector() {
 }
 
 function buildHourlyGrid() {
+  const { hourlyGuesses } = await loadDailyData();
   const grid = document.getElementById('hourlyGrid');
   if (!grid) return;
 
@@ -329,6 +330,13 @@ function buildHourlyGrid() {
     const localLabel = convertETToCityHourLabel(hourNum, city.timezone);
 
     const isPastCutoff = useTomorrow ? false : etNow >= etCutoff; // disable only if forecasting today and past ET cutoff
+
+    const prevGuess = hourlyGuesses.find(
+      g =>
+        g.city_id === city.id &&
+        g.hour === hourNum &&
+        g.date === getCityLocalDateISO(city.timezone, useTomorrow ? 1 : 0)
+    ); // find saved forecasts
 
     const card = document.createElement('div');
     card.className = 'city-card expanded';
