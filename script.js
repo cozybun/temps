@@ -211,10 +211,6 @@ async function buildDailyGrid() {
     const showYesterday = forecastDay === 'today';
 
     const cityActuals = actuals
-      .filter(a => a.city_id === city.id)
-      .sort((a,b) => new Date(b.date) - new Date(a.date));
-
-    const cityActuals = actuals
       .filter(a => a.city_id === city.id && new Date(a.date) <= new Date(cityYesterday))
       .sort((a,b) => new Date(b.date) - new Date(a.date));
 
