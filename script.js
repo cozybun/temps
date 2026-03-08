@@ -65,6 +65,22 @@ function getCityLocalDateISO(timezone, offset = 0) {
   return `${year}-${month}-${day}`;
 }
 
+function getETGameDateISO(useTomorrow = false) {
+  const etNow = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+
+  if (useTomorrow) {
+    etNow.setDate(etNow.getDate() + 1);
+  }
+
+  const year = etNow.getFullYear();
+  const month = String(etNow.getMonth() + 1).padStart(2, '0');
+  const day = String(etNow.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 function getPSTNow() {
   return new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
@@ -335,7 +351,7 @@ async function buildHourlyGrid() {
       g =>
         g.city_id === city.id &&
         g.hour === hourNum &&
-        g.date === getCityLocalDateISO(city.timezone, useTomorrow ? 1 : 0)
+        g.date === getETGameDateISO(useTomorrow)
     ); // find saved forecasts
 
     const card = document.createElement('div');
@@ -422,7 +438,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Save handler
+// Save handlers
 
 const dailyForm = document.getElementById('tempsForm');
 if (dailyForm) {
@@ -548,7 +564,7 @@ if (hourlyForm) {
       payload.push({
         city_id: cityId,
         city: city.name,
-        date: getCityLocalDateISO(city.timezone, useTomorrow ? 1 : 0),
+        date: date: getCityLocalDateISO,
         hour: hourNum,
         temp: Number(val),
         user_id: userId
