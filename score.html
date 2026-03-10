@@ -98,7 +98,7 @@ const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0';
 
 const { createClient } = supabase;
-const client = createClient(SUPABASE_URL, SUPABASE_KEY);
+const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* user id */
 
@@ -203,39 +203,28 @@ document.getElementById("total").style.opacity=1;
 
 /* share graphic */
 
-function buildShare(scores,coins){
+function buildShare(scores, coins, hourly, streak) {
+  const btn = document.getElementById("shareBtn");
 
-  const btn=document.getElementById("shareBtn");
-  
-  btn.onclick=async()=>{
-  
-  const circles=scores.map(s=>{
-  
-  if (s.forecast_high == null) {
-    return "⚪";
-  } // skipped forecast
-  const err=Math.max(s.error_high,s.error_low);
-  
-  if(err<=1) return "🟢";
-  if(err<=3) return "🟡";
-  return "🔴";
-  
+  btn.onclick = async () => {
+  const circles = scores.map(s => {
+    if (s.forecast_high == null) return "⚪";
+    const err = Math.max(s.error_high, s.error_low);
+    if (err <= 1) return "🟢";
+    if (err <= 3) return "🟡";
+    return "🔴";
   }).join(" ");
-  
-  const text=
-  `🐰 Temps With Friends
-  
-  ${circles}
-  
-  🪙 ${coins}
-    
+
+  const text = `🐰 Temps With Friends
+                ${circles} 
+                🕒 ${hourly}
+                🪙 ${coins}
+                ⭐ ${streak}`;
+
   await navigator.clipboard.writeText(text);
-  
   alert("Score copied! Share it 🐰");
-  
   };
-  
-  }
+}
 
 /* run */
 
