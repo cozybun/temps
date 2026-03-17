@@ -104,6 +104,12 @@ const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const userId = localStorage.getItem("tempsUserId");
 
+const CITY_ORDER = [
+  "Los Angeles",
+  "Austin",
+  "New York City"
+];
+
 /* yesterday game date */
 
 const gameDate = new Date(Date.now()-86400000)
@@ -207,15 +213,18 @@ function buildShare(scores, coins, hourly, streak) {
   const btn = document.getElementById("shareBtn");
 
   btn.onclick = async () => {
-  const circles = scores.map(s => {
+  const circles = CITY_ORDER.map(s => {
     if (s.forecast_high == null) return "⚪";
     const err = Math.max(s.error_high, s.error_low);
     if (err <= 1) return "🟢";
     if (err <= 3) return "🟡";
     return "🔴";
-  }).join(" ");
+  }).join("");
 
-  const text = `🐰 Temps With Friends
+  const gameDate = new Date(Date.now() - 86400000)
+  .toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    
+  const text = `Temps with Friends — ${gameDate}
                 ${circles} 
                 🕒 ${hourly}
                 🪙 ${coins}
