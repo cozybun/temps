@@ -639,8 +639,14 @@ function getETNow() {
 }
 
 // connect Reveal button to user score page
-document.getElementById("revealBtn").addEventListener("click", function () {
-window.location.href = "score.html";
+document.addEventListener("DOMContentLoaded", function () {
+const btn = document.getElementById("revealBtn");
+
+if (btn) {
+  btn.addEventListener("click", function () {
+    window.location.href = "score.html";
+    });
+  }
 });
 
 // Start page
