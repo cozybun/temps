@@ -638,8 +638,8 @@ function getETNow() {
   );
 }
 
-// connect Reveal button to score page
-document.getElementById("revealResults").addEventListener("click", function () {
+// connect Reveal button to user score page
+document.getElementById("revealBtn").addEventListener("click", function () {
 window.location.href = "score.html";
 });
 
