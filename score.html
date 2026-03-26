@@ -196,7 +196,6 @@
 
     const userId = localStorage.getItem("temps_user_id");
     const ydayDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-    const ydayDate = yday.toISOString().split("T")[0];
     const ydayLabel = yday.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
