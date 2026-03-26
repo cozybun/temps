@@ -22,21 +22,21 @@
     }
 
     #scoreList {
-    display: flex;
-    justify-content: flex-start;
-    gap: 12px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+      display: flex;
+      justify-content: flex-start;
+      gap: 12px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
     }
-    
+
     .score-row {
-    flex: 1; /* all take equal space */
-    min-width: 140px;
-    opacity: 0;
-    transform: scale(0.9) translateY(8px);
-    transition: 0.45s ease;
-    border-bottom: none;
-    padding: 12px;
+      flex: 1;
+      min-width: 140px;
+      opacity: 0;
+      transform: scale(0.9) translateY(8px);
+      transition: 0.45s ease;
+      border-bottom: none;
+      padding: 12px;
     }
 
     .score-row.visible {
@@ -60,7 +60,7 @@
       line-height: 1.5;
     }
 
-    .coin {
+    .coin, .mood {
       margin-top: 6px;
       font-weight: 600;
     }
@@ -81,6 +81,16 @@
       margin-top: 16px;
       font-size: 20px;
       font-weight: bold;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     button {
@@ -103,6 +113,10 @@
         font-size: 18px;
       }
 
+      .detail {
+        font-size: 15px;
+      }
+
       button {
         width: 100%;
       }
@@ -121,14 +135,15 @@
   <div id="total">🪙 <span id="coinTotal">0</span></div>
 
   <div id="stats">
-    ⭐ <span id="streakTotal">0</span>
+    <div class="stat-item">💗 <span id="moodTotal">0</span></div>
+    <div class="stat-item">⭐ <span id="streakTotal">0</span></div>
   </div>
 
   <button id="shareBtn"> Share </button>
 
   <script>
     const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
 
     const { createClient } = supabase;
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -143,6 +158,7 @@
     };
 
     let totalCoins = 0;
+    let totalMood = 0;
     let streak = 0;
 
     function animateNumber(elementId, target, duration = 600) {
@@ -177,7 +193,14 @@
       }
       return `${Math.abs(Math.round(Number(v)))}`;
     }
-    
+
+    function formatMood(v) {
+      if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
+        return "—";
+      }
+      return `${Math.round(Number(v))}`;
+    }
+
     function cityDisplay(row) {
       if (row.city && String(row.city).trim()) return String(row.city).trim();
       if (row.city_id !== null && row.city_id !== undefined) {
@@ -187,10 +210,7 @@
     }
 
     function rowMatchesCity(row, cityCfg) {
-      return (
-        // normalize(row.city) === normalize(cityCfg.name) ||
-        String(row.city_id ?? "") === String(cityCfg.id)
-      );
+      return String(row.city_id ?? "") === String(cityCfg.id);
     }
 
     function uniqueKey(row) {
@@ -205,7 +225,6 @@
       if (!hasForecast(row)) return "⚪";
 
       const error_high = Number(row.error_high);
-      const error_low = Number(row.error_low);
 
       if (error_high <= 1) return "🟢";
       if (error_high <= 3) return "🟡";
@@ -221,7 +240,6 @@
         return;
       }
 
-      // fixed undefined error variable
       const { data: scores, error: scoreError } = await client
         .from("daily_scores")
         .select("*")
@@ -235,10 +253,10 @@
         return;
       }
 
-      // robust user_stats handling
+      // Keep this safe: only read current_streak from user_stats
       let { data: userStats, error: statsError } = await client
         .from("user_stats")
-        .select("current_streak, current_coins, mood")
+        .select("current_streak")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -251,9 +269,7 @@
         const { error: upsertError } = await client.from("user_stats").upsert(
           {
             user_id: userId,
-            current_streak: 0,
-            current_coins: 0,
-            mood: 0
+            current_streak: 0
           },
           { onConflict: "user_id" }
         );
@@ -268,7 +284,10 @@
 
       if (!scores || scores.length === 0) {
         document.getElementById("scoreList").innerHTML = "<p>No score yet.</p>";
+        totalCoins = 0;
+        totalMood = 0;
         animateNumber("coinTotal", 0, 600);
+        animateNumber("moodTotal", 0, 600);
         animateNumber("streakTotal", streak, 600);
         document.getElementById("total").style.opacity = 1;
         return;
@@ -277,6 +296,7 @@
       const list = document.getElementById("scoreList");
       list.innerHTML = "";
       totalCoins = 0;
+      totalMood = 0;
 
       const rows = scores;
 
@@ -285,6 +305,7 @@
 
         if (forecasted) {
           totalCoins += Number(s.coins || 0);
+          totalMood += Number(s.mood || 0);
         }
 
         const icon = resultCircle(s);
@@ -299,6 +320,7 @@
           : `No forecasts submitted for yesterday`;
 
         const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
+        const moodText = forecasted ? `💗 ${formatMood(s.mood)}` : `💗 —`;
         const rowClass = forecasted ? "score-row" : "score-row missing";
 
         const row = document.createElement("div");
@@ -308,14 +330,16 @@
           <div class="msg">${s.message || (forecasted ? "" : "No submission")}</div>
           <div class="detail">${detailHtml}</div>
           <div class="coin">${coinText}</div>
+          <div class="mood">${moodText}</div>
         `;
         list.appendChild(row);
       });
 
       document.getElementById("coinTotal").textContent = "0";
+      document.getElementById("moodTotal").textContent = "0";
       document.getElementById("streakTotal").textContent = "0";
       revealRows(rows.length);
-      buildShare(rows, totalCoins, streak);
+      buildShare(rows, totalCoins, totalMood, streak);
     }
 
     function revealRows(rowCount) {
@@ -329,6 +353,7 @@
 
       setTimeout(() => {
         animateNumber("coinTotal", totalCoins, 600);
+        animateNumber("moodTotal", totalMood, 600);
         animateNumber("streakTotal", streak, 600);
       }, rowCount * 300);
 
@@ -374,7 +399,6 @@
     }
 
     async function copyText(text) {
-      // try modern clipboard API first for secure contexts
       if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
         try {
           await navigator.clipboard.writeText(text);
@@ -384,7 +408,7 @@
         }
       }
 
-      try { // failsafe legacy execCommand
+      try {
         const ta = document.createElement("textarea");
         ta.value = text;
         ta.setAttribute("readonly", "");
@@ -398,33 +422,33 @@
       } catch (e) {
         console.warn("execCommand fallback failed:", e);
       }
-    
+
       return false;
     }
 
-    function buildShare(scores, totalCoins, streak) {
+    function buildShare(scores, totalCoins, totalMood, streak) {
       const btn = document.getElementById("shareBtn");
-    
+
       btn.onclick = async () => {
         const orderedCityIds = Object.keys(CITY_BY_ID)
           .map((id) => Number(id))
-          .sort((a, b) => a - b); // 1,2,3 order
-    
+          .sort((a, b) => a - b);
+
         const circles = orderedCityIds
           .map((id) => {
             const row = scores.find((r) => Number(r.city_id) === id);
             return resultCircle(row || {});
           })
           .join(" ");
-    
+
         const gameDate = new Date(Date.now() - 86400000).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric"
         });
-    
+
         const text =
-          `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n⭐ ${streak}`;
-    
+          `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n💗 ${totalMood}\n⭐ ${streak}`;
+
         const ok = await copyText(text);
         if (ok) {
           showShareStatus("✅ Score copied!");
