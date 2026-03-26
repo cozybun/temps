@@ -195,22 +195,26 @@
     }
 
     function orderedScores(scores) {
-      const used = new Set();
-      const ordered = [];
-
-      CITY_ORDER.forEach((cityCfg) => {
-        const found = scores.find((r) => rowMatchesCity(r, cityCfg) && !used.has(uniqueKey(r)));
-        if (found) {
-          ordered.push(found);
-          used.add(uniqueKey(found));
-        }
+      const byName = Object.fromEntries(
+        CITY_ORDER.map((c, i) => [c.name.toLowerCase().trim(), i])
+      );
+      const byId = Object.fromEntries(
+        CITY_ORDER.map((c, i) => [String(c.id), i])
+      );
+    
+      return [...scores].sort((a, b) => {
+        const rank = (row) => {
+          const nameRank = byName[normalize(row.city)];
+          if (nameRank !== undefined) return nameRank; // prefer city name
+    
+          const idRank = byId[String(row.city_id ?? "")];
+          if (idRank !== undefined) return idRank;
+    
+          return 999; // unknown cities last
+        };
+    
+        return rank(a) - rank(b);
       });
-
-      scores.forEach((r) => {
-        if (!used.has(uniqueKey(r))) ordered.push(r);
-      });
-
-      return ordered;
     }
 
     function hasForecast(row) {
