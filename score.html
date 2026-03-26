@@ -6,7 +6,7 @@
   <title>Your Score</title>
 
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
 
   <style>
     body {
@@ -60,7 +60,8 @@
       line-height: 1.5;
     }
 
-    .coin, .mood {
+    .coin,
+    .mood {
       margin-top: 6px;
       font-weight: 600;
     }
@@ -100,6 +101,13 @@
       cursor: pointer;
     }
 
+    #scoreErrorBanner {
+      margin-top: 10px;
+      color: #b91c1c;
+      min-height: 20px;
+      font-size: 14px;
+    }
+
     @media (max-width: 500px) {
       body {
         padding: 14px 12px;
@@ -131,7 +139,6 @@
   <h1> My Score </h1>
 
   <div id="scoreList"></div>
-
   <div id="total">🪙 <span id="coinTotal">0</span></div>
 
   <div id="stats">
@@ -140,18 +147,31 @@
   </div>
 
   <button id="shareBtn"> Share </button>
+  <div id="scoreErrorBanner"></div>
 
   <script>
-    const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
+    const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co".replace(/\/+$/, "");
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
 
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("Missing Supabase URL or anon key.");
+    }
+
     const { createClient } = supabase;
-    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      // Force headers so the request always contains apikey/Authorization
+      global: {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      },
+    });
 
     const userId = localStorage.getItem("temps_user_id");
     const ydayDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
-    const CITY_BY_ID = { // keep city IDs in DB from west to east for graphic
+    const CITY_BY_ID = {
       1: "Los Angeles",
       2: "Austin",
       3: "New York City"
@@ -161,9 +181,18 @@
     let totalMood = 0;
     let streak = 0;
 
+    function showBanner(message, isError = false) {
+      const banner = document.getElementById("scoreErrorBanner");
+      if (!banner) return;
+      banner.textContent = message || "";
+      banner.style.color = isError ? "#b91c1c" : "#166534";
+      if (message) {
+        setTimeout(() => (banner.textContent = ""), 5000);
+      }
+    }
+
     function animateNumber(elementId, target, duration = 600) {
       const el = document.getElementById(elementId);
-      const start = 0;
       const startTime = performance.now();
 
       function update(now) {
@@ -181,10 +210,6 @@
       }
 
       requestAnimationFrame(update);
-    }
-
-    function normalize(v) {
-      return String(v ?? "").trim().toLowerCase();
     }
 
     function format(v) {
@@ -209,14 +234,6 @@
       return "Unknown City";
     }
 
-    function rowMatchesCity(row, cityCfg) {
-      return String(row.city_id ?? "") === String(cityCfg.id);
-    }
-
-    function uniqueKey(row) {
-      return row.id || `${row.user_id}-${row.date}-${row.city_id}-${row.hour || ""}`;
-    }
-
     function hasForecast(row) {
       return row.forecast_high != null && row.forecast_low != null;
     }
@@ -229,6 +246,22 @@
       if (error_high <= 1) return "🟢";
       if (error_high <= 3) return "🟡";
       return "🔴";
+    }
+
+    async function checkAuth() {
+      // Lightweight sanity check to prove API key headers are being sent.
+      const { error } = await client
+        .from("daily_scores")
+        .select("id", { head: true, count: "exact" })
+        .limit(1);
+
+      if (error) {
+        console.error("Auth probe failed:", error);
+        showBanner(`Auth probe failed: ${error.message}`, true);
+        return false;
+      }
+      console.log("Auth probe OK.");
+      return true;
     }
 
     async function loadScore() {
@@ -250,10 +283,11 @@
       if (scoreError) {
         console.error("Score Fetch Error:", scoreError);
         document.getElementById("scoreList").innerHTML = "<p>Could not load scores.</p>";
+        showBanner(`Could not load scores: ${scoreError.message || "Unknown error"}`, true);
         return;
       }
 
-      // Keep this safe: only read current_streak from user_stats
+      // Keep user_stats query minimal to avoid side effects
       let { data: userStats, error: statsError } = await client
         .from("user_stats")
         .select("current_streak")
@@ -284,8 +318,6 @@
 
       if (!scores || scores.length === 0) {
         document.getElementById("scoreList").innerHTML = "<p>No score yet.</p>";
-        totalCoins = 0;
-        totalMood = 0;
         animateNumber("coinTotal", 0, 600);
         animateNumber("moodTotal", 0, 600);
         animateNumber("streakTotal", streak, 600);
@@ -298,9 +330,7 @@
       totalCoins = 0;
       totalMood = 0;
 
-      const rows = scores;
-
-      rows.forEach((s) => {
+      scores.forEach((s) => {
         const forecasted = hasForecast(s);
 
         if (forecasted) {
@@ -338,8 +368,8 @@
       document.getElementById("coinTotal").textContent = "0";
       document.getElementById("moodTotal").textContent = "0";
       document.getElementById("streakTotal").textContent = "0";
-      revealRows(rows.length);
-      buildShare(rows, totalCoins, totalMood, streak);
+      revealRows(scores.length);
+      buildShare(scores, totalCoins, totalMood, streak);
     }
 
     function revealRows(rowCount) {
@@ -430,9 +460,7 @@
       const btn = document.getElementById("shareBtn");
 
       btn.onclick = async () => {
-        const orderedCityIds = Object.keys(CITY_BY_ID)
-          .map((id) => Number(id))
-          .sort((a, b) => a - b);
+        const orderedCityIds = Object.keys(CITY_BY_ID).map((id) => Number(id)).sort((a, b) => a - b);
 
         const circles = orderedCityIds
           .map((id) => {
@@ -459,7 +487,15 @@
       };
     }
 
-    loadScore();
+    (async () => {
+      const ok = await checkAuth();
+      if (ok) {
+        loadScore();
+      } else {
+        document.getElementById("scoreList").innerHTML =
+          "<p>Could not connect. Check your Supabase key/project settings.</p>";
+      }
+    })();
   </script>
 </body>
 </html>
