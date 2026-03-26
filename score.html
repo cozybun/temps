@@ -21,11 +21,12 @@
       margin-bottom: 10px;
     }
 
-     #scoreList {
+    #scoreList {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 12px;
-    flex-wrap: wrap; /* optional for responsiveness */
+    flex-wrap: nowrap;
+    overflow-x: auto;
     }
     
     .score-row {
@@ -111,7 +112,7 @@
     <button>← Back</button>
   </a>
 
-  <h1>Your Score</h1>
+  <h1> My Score </h1>
 
   <div id="scoreList"></div>
 
@@ -121,7 +122,7 @@
     ⭐ <span id="streakTotal">0</span>
   </div>
 
-  <button id="shareBtn">Share Score</button>
+  <button id="shareBtn"> Share </button>
 
   <script>
     const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
@@ -398,10 +399,16 @@
       const btn = document.getElementById("shareBtn");
     
       btn.onclick = async () => {
-        const circles = CITY_ORDER.map((cityCfg) => {
-          const row = scores.find((r) => rowMatchesCity(r, cityCfg));
-          return resultCircle(row || {});
-        }).join(" ");
+        const orderedCityIds = Object.keys(CITY_BY_ID)
+          .map((id) => Number(id))
+          .sort((a, b) => a - b); // 1,2,3 order
+    
+        const circles = orderedCityIds
+          .map((id) => {
+            const row = scores.find((r) => Number(r.city_id) === id);
+            return resultCircle(row || {});
+          })
+          .join(" ");
     
         const gameDate = new Date(Date.now() - 86400000).toLocaleDateString("en-US", {
           month: "short",
@@ -413,9 +420,9 @@
     
         const ok = await copyText(text);
         if (ok) {
-          showShareStatus("✅ Score copied");
+          showShareStatus("✅ Score copied!");
         } else {
-          showShareStatus("⚠️ Clipboard is blocked here. Use the text box below.", "error");
+          showShareStatus("⚠️ Clipboard is blocked here. Use text box below.", "error");
           showManualShareFallback(text);
         }
       };
