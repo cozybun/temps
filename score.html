@@ -133,14 +133,13 @@
     const userId = localStorage.getItem("temps_user_id");
     const ydayDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
-    // keep city IDs in DB from west to east for graphic
-    const CITY_ORDER = [
+    const CITY_ORDER = [ // keep city IDs in DB from west to east for graphic
       { id: 1, name: "Los Angeles" },
       { id: 2, name: "Austin" },
       { id: 3, name: "New York City" }
     ];
 
-    const CITY_BY_ID = { // local city map
+    const CITY_BY_ID = { // local city map to match db city IDs
       1: "New York City",
       2: "Los Angeles",
       3: "Austin"
