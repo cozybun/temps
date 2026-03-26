@@ -240,7 +240,7 @@
       return `${Math.abs(Math.round(Number(v)))}`;
     }
 
-    function formatMood(v) {
+    function formatSignedNumber(v) {
       if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
         return "—";
       }
@@ -362,16 +362,16 @@
         const icon = resultCircle(s);
         const detailHtml = forecasted
           ? `
-              My Forecasts:   H ${s.forecast_high}° / L ${s.forecast_low}°
+              My Forecasts: &nbsp;&nbsp;&nbsp; H ${s.forecast_high}° / L ${s.forecast_low}°
               <br />
-              Actual Temps:   H ${s.actual_high}° / L ${s.actual_low}°
+              Actual Temps: &nbsp;&nbsp;&nbsp; H ${s.actual_high}° / L ${s.actual_low}°
               <br />
-              Accuracy:   H ${format(s.error_high)}° / L ${format(s.error_low)}° Error
+              Accuracy: &nbsp;&nbsp;&nbsp; H ${format(s.error_high)}° / L ${format(s.error_low)}° Error
             `
           : `No forecasts submitted for yesterday`;
 
         const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
-        const moodText = forecasted ? `💗 ${formatMood(s.mood)}` : `💗 —`;
+        const moodText = forecasted ? `💗 ${formatSignedNumber(s.mood)}` : `💗 —`;
         const rowClass = forecasted ? "score-row" : "score-row missing";
 
         const row = document.createElement("div");
