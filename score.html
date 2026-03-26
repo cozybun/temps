@@ -22,21 +22,21 @@
     }
 
     #scoreList {
-      display: flex;
-      justify-content: flex-start;
-      gap: 12px;
-      flex-wrap: nowrap;
-      overflow-x: auto;
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     }
-
+    
     .score-row {
-      flex: 1;
-      min-width: 140px;
-      opacity: 0;
-      transform: scale(0.9) translateY(8px);
-      transition: 0.45s ease;
-      border-bottom: none;
-      padding: 12px;
+    flex: 1; /* all take equal space */
+    min-width: 140px;
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+    transition: 0.45s ease;
+    border-bottom: none;
+    padding: 12px;
     }
 
     .score-row.visible {
@@ -65,38 +65,20 @@
       font-weight: 600;
     }
 
-    .mood {
-      margin-top: 6px;
-      font-weight: 600;
-    }
-
     .missing {
       opacity: 0.75;
     }
 
     #total {
-      margin-top: 16px;
+      margin-top: 18px;
       font-size: 20px;
       font-weight: bold;
-      justify-content: center;
       opacity: 0;
       transition: opacity 0.3s ease;
     }
 
     #stats {
-      margin-top: 16px;
-      font-size: 20px;
-      ont-weight: bold;
-      display: flex;
-      justify-content: center;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-
-    .stat-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      margin-top: 6px;
     }
 
     button {
@@ -119,10 +101,6 @@
         font-size: 18px;
       }
 
-      .detail {
-        font-size: 15px;
-      }
-
       button {
         width: 100%;
       }
@@ -141,15 +119,14 @@
   <div id="total">🪙 <span id="coinTotal">0</span></div>
 
   <div id="stats">
-    <div class="stat-item">💗 <span id="moodTotal">0</span></div>
-    <div class="stat-item">⭐ <span id="streakTotal">0</span></div>
+    ⭐ <span id="streakTotal">0</span>
   </div>
 
   <button id="shareBtn"> Share </button>
 
   <script>
     const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
 
     const { createClient } = supabase;
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -157,7 +134,7 @@
     const userId = localStorage.getItem("temps_user_id");
     const ydayDate = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
-    const CITY_BY_ID = {
+    const CITY_BY_ID = { // keep city IDs in DB from west to east for graphic
       1: "Los Angeles",
       2: "Austin",
       3: "New York City"
@@ -165,25 +142,21 @@
 
     let totalCoins = 0;
     let streak = 0;
-    let totalMood = 0;
 
     function animateNumber(elementId, target, duration = 600) {
       const el = document.getElementById(elementId);
+      const start = 0;
       const startTime = performance.now();
-      const end = Number(target) || 0;
 
       function update(now) {
         const progress = Math.min((now - startTime) / duration, 1);
-        const value = end >= 0
-          ? Math.floor(progress * end)
-          : -Math.floor(progress * Math.abs(end));
-
+        const value = Math.floor(progress * target);
         el.textContent = value;
 
         if (progress < 1) {
           requestAnimationFrame(update);
         } else {
-          el.textContent = end;
+          el.textContent = target;
           el.style.transform = "scale(1.2)";
           setTimeout(() => (el.style.transform = "scale(1)"), 125);
         }
@@ -192,26 +165,34 @@
       requestAnimationFrame(update);
     }
 
-    function formatTemp(v) {
+    function normalize(v) {
+      return String(v ?? "").trim().toLowerCase();
+    }
+
+    function format(v) {
       if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
         return "—";
       }
       return `${Math.abs(Math.round(Number(v)))}`;
     }
-
-    function formatMood(v) {
-      if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
-        return "—";
-      }
-      return `${Math.round(Number(v))}`;
-    }
-
+    
     function cityDisplay(row) {
       if (row.city && String(row.city).trim()) return String(row.city).trim();
       if (row.city_id !== null && row.city_id !== undefined) {
         return CITY_BY_ID[row.city_id] || CITY_BY_ID[String(row.city_id)] || `City ${row.city_id}`;
       }
       return "Unknown City";
+    }
+
+    function rowMatchesCity(row, cityCfg) {
+      return (
+        // normalize(row.city) === normalize(cityCfg.name) ||
+        String(row.city_id ?? "") === String(cityCfg.id)
+      );
+    }
+
+    function uniqueKey(row) {
+      return row.id || `${row.user_id}-${row.date}-${row.city_id}-${row.hour || ""}`;
     }
 
     function hasForecast(row) {
@@ -222,6 +203,7 @@
       if (!hasForecast(row)) return "⚪";
 
       const error_high = Number(row.error_high);
+      const error_low = Number(row.error_low);
 
       if (error_high <= 1) return "🟢";
       if (error_high <= 3) return "🟡";
@@ -237,6 +219,7 @@
         return;
       }
 
+      // fixed undefined error variable
       const { data: scores, error: scoreError } = await client
         .from("daily_scores")
         .select("*")
@@ -250,10 +233,10 @@
         return;
       }
 
-      // keep only streak from user_stats
+      // robust user_stats handling
       let { data: userStats, error: statsError } = await client
         .from("user_stats")
-        .select("current_streak")
+        .select("current_streak, current_coins, mood")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -266,7 +249,9 @@
         const { error: upsertError } = await client.from("user_stats").upsert(
           {
             user_id: userId,
-            current_streak: 0
+            current_streak: 0,
+            current_coins: 0,
+            mood: 0
           },
           { onConflict: "user_id" }
         );
@@ -281,10 +266,8 @@
 
       if (!scores || scores.length === 0) {
         document.getElementById("scoreList").innerHTML = "<p>No score yet.</p>";
-        totalMood = 0;
         animateNumber("coinTotal", 0, 600);
         animateNumber("streakTotal", streak, 600);
-        animateNumber("moodTotal", totalMood, 600);
         document.getElementById("total").style.opacity = 1;
         return;
       }
@@ -292,52 +275,45 @@
       const list = document.getElementById("scoreList");
       list.innerHTML = "";
       totalCoins = 0;
-      totalMood = 0;
 
-      rowsLoop(scores, list);
+      const rows = scores;
 
-      document.getElementById("coinTotal").textContent = "0";
-      document.getElementById("streakTotal").textContent = "0";
-      document.getElementById("moodTotal").textContent = "0";
-
-      revealRows(scores.length);
-      buildShare(scores, totalCoins, streak, totalMood);
-    }
-
-    function rowsLoop(scores, list) {
-      scores.forEach((s) => {
+      rows.forEach((s) => {
         const forecasted = hasForecast(s);
 
         if (forecasted) {
           totalCoins += Number(s.coins || 0);
-          totalMood += Number(s.mood || 0); // uses daily_scores.mood
         }
 
         const icon = resultCircle(s);
         const detailHtml = forecasted
           ? `
-            My Forecasts: H ${formatTemp(s.forecast_high)}° / L ${formatTemp(s.forecast_low)}°
-            <br />
-            Actual Temps: H ${formatTemp(s.actual_high)}° / L ${formatTemp(s.actual_low)}°
-            <br />
-            Accuracy: H ${formatTemp(s.error_high)}° / L ${formatTemp(s.error_low)}° Error
-          `
+              My Forecasts:   H ${s.forecast_high}° / L ${s.forecast_low}°
+              <br />
+              Actual Temps:   H ${s.actual_high}° / L ${s.actual_low}°
+              <br />
+              Accuracy:   H ${format(s.error_high)}° / L ${format(s.error_low)}° Error
+            `
           : `No forecasts submitted for yesterday`;
 
         const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
-        const moodText = forecasted ? `${formatMood(s.mood)}` : "—";
+        const rowClass = forecasted ? "score-row" : "score-row missing";
 
         const row = document.createElement("div");
-        row.className = forecasted ? "score-row" : "score-row missing";
+        row.className = rowClass;
         row.innerHTML = `
           <div class="city">${icon} ${cityDisplay(s)}</div>
           <div class="msg">${s.message || (forecasted ? "" : "No submission")}</div>
           <div class="detail">${detailHtml}</div>
           <div class="coin">${coinText}</div>
-          <div class="mood">💗 ${moodText}</div>
         `;
         list.appendChild(row);
       });
+
+      document.getElementById("coinTotal").textContent = "0";
+      document.getElementById("streakTotal").textContent = "0";
+      revealRows(rows.length);
+      buildShare(rows, totalCoins, streak);
     }
 
     function revealRows(rowCount) {
@@ -352,7 +328,6 @@
       setTimeout(() => {
         animateNumber("coinTotal", totalCoins, 600);
         animateNumber("streakTotal", streak, 600);
-        animateNumber("moodTotal", totalMood, 600);
       }, rowCount * 300);
 
       setTimeout(() => {
@@ -397,6 +372,7 @@
     }
 
     async function copyText(text) {
+      // try modern clipboard API first for secure contexts
       if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
         try {
           await navigator.clipboard.writeText(text);
@@ -406,7 +382,7 @@
         }
       }
 
-      try {
+      try { // failsafe legacy execCommand
         const ta = document.createElement("textarea");
         ta.value = text;
         ta.setAttribute("readonly", "");
@@ -420,33 +396,33 @@
       } catch (e) {
         console.warn("execCommand fallback failed:", e);
       }
-
+    
       return false;
     }
 
-    function buildShare(scores, totalCoins, streak, totalMood) {
+    function buildShare(scores, totalCoins, streak) {
       const btn = document.getElementById("shareBtn");
-
+    
       btn.onclick = async () => {
         const orderedCityIds = Object.keys(CITY_BY_ID)
           .map((id) => Number(id))
-          .sort((a, b) => a - b);
-
+          .sort((a, b) => a - b); // 1,2,3 order
+    
         const circles = orderedCityIds
           .map((id) => {
             const row = scores.find((r) => Number(r.city_id) === id);
             return resultCircle(row || {});
           })
           .join(" ");
-
+    
         const gameDate = new Date(Date.now() - 86400000).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric"
         });
-
+    
         const text =
-          `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n💗 ${totalMood}\n⭐ ${streak}`;
-
+          `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n⭐ ${streak}`;
+    
         const ok = await copyText(text);
         if (ok) {
           showShareStatus("✅ Score copied!");
