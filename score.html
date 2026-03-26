@@ -26,7 +26,7 @@
       justify-content: flex-start;
       gap: 12px;
       flex-wrap: nowrap;
-      overflow-x: auto;
+      overflow-x: hidden;
     }
 
     .score-row {
@@ -59,18 +59,26 @@
       margin-top: 6px;
       line-height: 1.5;
       white-space: nowrap;   /* safety */
-      overflow-x: auto;      /* optional: allow horizontal scroll if needed */
-    }
-
-    .detail-line {
       display: flex;
-      align-items: baseline;
-      gap: 12px;
-      white-space: nowrap;   /* keep whole line on one row */
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .coin,
-    .mood {
+   .detail-line {
+     display: flex;
+     align-items: baseline;
+     gap: 10px;
+     white-space: nowrap;      /* keep each line on one row */
+     overflow: hidden;         /* prevent scrollbar */
+     text-overflow: ellipsis;  /* graceful fallback if super narrow */
+   }
+
+    .detail-label {
+      flex: 0 0 110px;         /* keep label spacing consistent */
+      white-space: nowrap;
+    }
+
+    .coin, .mood {
       margin-top: 6px;
       font-weight: 600;
     }
