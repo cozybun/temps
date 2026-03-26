@@ -169,6 +169,13 @@
       return String(v ?? "").trim().toLowerCase();
     }
 
+    function format(v) {
+      if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
+        return "—";
+      }
+      return `${Math.abs(Math.round(Number(v)))}°`;
+    }
+    
     function cityDisplay(row) {
       if (row.city && String(row.city).trim()) return String(row.city).trim();
       if (row.city_id !== null && row.city_id !== undefined) {
@@ -285,9 +292,9 @@
               <br />
               Actual Temps: H ${s.actual_high} / L ${s.actual_low}
               <br />
-              Acurracy: H ${s.error_high}° / L {s.error_low}° Error
+              Accuracy: H ${format(s.error_high(}° / L ${format(s.error_low)}° Error
             `
-          : `No forecast submitted for yesterday`;
+          : `No forecasts submitted for yesterday`;
 
         const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
         const rowClass = forecasted ? "score-row" : "score-row missing";
