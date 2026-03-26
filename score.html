@@ -28,6 +28,9 @@
       margin: 16px 0;
       border-bottom: 1px solid #eee;
       padding-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .score-row.visible {
@@ -231,7 +234,7 @@
         return;
       }
 
-      // --- 1) fixed undefined error variable
+      // fixed undefined error variable
       const { data: scores, error: scoreError } = await client
         .from("daily_scores")
         .select("*")
@@ -245,7 +248,7 @@
         return;
       }
 
-      // --- 2) robust user_stats handling
+      // robust user_stats handling
       let { data: userStats, error: statsError } = await client
         .from("user_stats")
         .select("current_streak, current_coins, mood")
