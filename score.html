@@ -62,7 +62,7 @@
     }
 
     .detail {
-      font-size: 16px;
+      font-size: 18px;
       margin-top: 6px;
       line-height: 1.5;
       white-space: nowrap;   /* safety */
@@ -133,7 +133,6 @@
     
     button {
       padding: 10px 16px;
-      margin-top: 16px;
       font-size: 22px;
       cursor: pointer;
     }
@@ -541,7 +540,7 @@
           day: "numeric"
         });
 
-        const text = `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n💗 ${formatSignedNumber(totalMood)}\n⭐ ${streak}`;
+        const text = `Temps with Friends — ${gameDate}\n${circles}\n🪙 ${totalCoins}\n💗 ${formatSignedNumber(totalMood)}\n⭐ ${currentStreak}`;
 
         const ok = await copyText(text);
         if (ok) {
