@@ -287,44 +287,53 @@
       }
     }
 
-    function animateNumber(elementId, target, duration = 600) {
+    function animateNumber(elementId, target, duration = 800) {
       const el = document.getElementById(elementId);
       const startTime = performance.now();
 
-      function update(now) {
-        const progress = Math.min((now - startTime) / duration, 1);
-        const value = Math.floor(progress * target);
-        el.textContent = value;
-
-        if (progress < 1) {
-          requestAnimationFrame(update);
-        } else {
-          el.textContent = target;
-          el.style.transform = "scale(1.2)";
-          setTimeout(() => (el.style.transform = "scale(1)"), 125);
-        }
-      }
-
-      requestAnimationFrame(update);
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
     }
 
-  function animateSignedNumber(elementId, target, duration = 600) {
-    const el = document.getElementById(elementId);
-    const startTime = performance.now();
-  
+    function animateNumber(elementId, target, duration = 800) {
+      const el = document.getElementById(elementId);
+      const startTime = performance.now();
+
     function update(now) {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const value = target * progress;
-      el.textContent = formatSignedNumber(value);
+      const rawProgress = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(rawProgress);
+      const value = Math.floor(eased * target);
+      el.textContent = value;
   
-      if (progress < 1) {
+      if (rawProgress < 1) {
         requestAnimationFrame(update);
       } else {
-        el.textContent = formatSignedNumber(target);
+        el.textContent = target;
         el.style.transform = "scale(1.2)";
         setTimeout(() => (el.style.transform = "scale(1)"), 125);
       }
     }
+
+      requestAnimationFrame(update);
+    }
+
+  function animateSignedNumber(elementId, target, duration = 800) {
+    const el = document.getElementById(elementId);
+    const startTime = performance.now();
+  
+    function update(now) {
+      const rawProgress = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(rawProgress);
+      const value = target * eased;
+      el.textContent = formatSignedNumber(value);
+  
+      if (rawProgress < 1) requestAnimationFrame(update);
+      else {
+        el.textContent = formatSignedNumber(target);
+        el.style.transform = "scale(1.2)";
+        setTimeout(() => (el.style.transform = "scale(1)"), 125);
+      }
+  }
   
     requestAnimationFrame(update);
   }
@@ -437,9 +446,9 @@
       if (!scores || scores.length === 0) {
         document.getElementById("scoreList").innerHTML = "<p>No score yet.</p>";
         renderCityCircles([]);
-        animateNumber("coinTotal", 0, 600);
-        animateSignedNumber("moodTotal", 0, 600);
-        animateNumber("currentStreak", currentStreak, 600);
+        animateNumber("coinTotal", 0, 800);
+        animateSignedNumber("moodTotal", 0, 800);
+        animateNumber("currentStreak", currentStreak, 800);
         return;
       }
 
@@ -501,9 +510,9 @@
       });
 
       setTimeout(() => {
-        animateNumber("coinTotal", totalCoins, 600);
-        animateSignedNumber("moodTotal", totalMood, 600);
-        animateNumber("currentStreak", currentStreak, 600);
+        animateNumber("coinTotal", totalCoins, 800);
+        animateSignedNumber("moodTotal", totalMood, 800);
+        animateNumber("currentStreak", currentStreak, 800);
       }, rowCount * 300);
     }
 
