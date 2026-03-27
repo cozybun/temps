@@ -103,8 +103,16 @@
       font-size: 22px;
       font-weight: bold;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stat-row {
+      display: flex;
       justify-content: center;
       gap: 14px;
+      width: 100%;
       flex-wrap: wrap;
     }
 
@@ -171,8 +179,10 @@
   <div id="scoreList"></div>
   <div id="stats">
     <div class="stat-item">🪙 <span id="coinTotal">0</span></div>
-    <div class="stat-item">💗 <span id="moodTotal">0</span></div>
-    <div class="stat-item">⭐ <span id="currentStreak">0</span></div>
+    <div class="stat-row">
+      <div class="stat-item">💗 <span id="moodTotal">0</span></div>
+      <div class="stat-item">⭐ <span id="currentStreak">0</span></div>
+  </div>
   </div>
 
   <div id="cityCircles"> ⚪ ⚪ ⚪ </div>
