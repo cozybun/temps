@@ -612,6 +612,8 @@ if (hourlyForm) {
       const selectedCutoff = getHourlyCutoff(etNow, selectedHourNum);
       const cityId = Number(input.dataset.cityId);
       const city = cities.find(c => c.id === cityId);
+      const forecastHour = Number(input.dataset.hour);
+      if (Number.isNaN(forecastHour)) return;
 
       // block if forecasting today & past cutoff for each forecast type separately
       if (!useTomorrow && etNow >= selectedCutoff) {
@@ -619,14 +621,24 @@ if (hourlyForm) {
         return;
       }
 
-      payload.push({
-        city_id: cityId,
-        city: city.name,
-        date: selectedForecastDate,
-        hour: selectedHourNum,
-        temp: Number(val),
-        user_id: userId
-      });
+      const payloadKey = `${cityId}-${selectedForecastDate}-${forecastHour}`;
+      const existing = payload.find(p =>
+        p.city_id === cityId &&
+        p.date === selectedForecastDate &&
+        p.hour === forecastHour
+      );
+
+      if (existing) {
+        existing.temp = Number(val); // safety in case duplicate DOM rows somehow appear
+      } else {
+        payload.push({
+          city_id: cityId,
+          city: city.name,
+          date: selectedForecastDate,
+          hour: forecastHour,
+          temp: Number(val),
+          user_id: userId
+        });
     });
 
     if (blocked) {
