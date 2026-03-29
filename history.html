@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forecast History</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #3b82f6;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      --good: #10b981;
+      --warn: #f59e0b;
+      --soft: #f3f4f6;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 12px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #f8fbff, var(--bg));
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+    }
+
+    .wrap {
+      width: min(1120px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title {
+      margin: 0;
+      text-align: center;
+      font-size: 1.7rem;
+      font-weight: 750;
+      letter-spacing: -0.01em;
+      color: #111827;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.98rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .status {
+      border-left: 4px solid var(--accent);
+      background: #eff6ff;
+      color: #1d4ed8;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .status.error {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+      color: #991b1b;
+    }
+
+    .status.loading {
+      background: #f9fafb;
+      border-left-color: #64748b;
+      color: #334155;
+    }
+
+    .meta {
+      color: var(--muted);
+      margin: 0 0 12px;
+      font-size: 0.93rem;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: #374151;
+      font-weight: 600;
+    }
+
+    input[type="text"], input[type="date"], select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #111827;
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-size: 0.94rem;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .button:hover { filter: brightness(1.03); }
+
+    .button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .button.ghost {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid #d1d5db;
+    }
+
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 880px;
+    }
+
+    thead th {
+      background: #f8fafc;
+      text-align: left;
+      font-size: 0.82rem;
+      color: #334155;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+      font-size: 0.94rem;
+      color: #1f2937;
+    }
+
+    tbody tr:hover td {
+      background: #f9fafb;
+    }
+
+    .muted { color: #6b7280; }
+
+    .message-cell {
+      max-width: 280px;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .empty {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px 12px;
+      font-size: 0.95rem;
+      background: #fafafa;
+    }
+
+    .small {
+      font-size: 0.84rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .btn-row {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 640px) {
+      .title {
+        font-size: 1.45rem;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-row {
+        width: 100%;
+      }
+
+      .controls-row .button {
+        flex: 1 1 auto;
+      }
+
+      .btn-row {
+        justify-content: stretch;
+      }
+
+      .btn-row .button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1 class="title">📖 Forecast History</h1>
+      <p class="subtitle">Filter, search, and sort your saved forecast entries from <strong>daily_scores</strong>.</p>
+    </header>
+
+    <section class="card">
+      <div id="status" class="status loading">Loading your forecast history…</div>
+      <p id="countText" class="meta"></p>
+
+      <div class="controls">
+        <div class="control">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" type="text" placeholder="City or message…" />
+        </div>
+        <div class="control">
+          <label for="cityFilter">City</label>
+          <select id="cityFilter">
+            <option value="">All cities</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="fromDate">From date</label>
+          <input id="fromDate" type="date" />
+        </div>
+        <div class="control">
+          <label for="toDate">To date</label>
+          <input id="toDate" type="date" />
+        </div>
+        <div class="control">
+          <label for="sortBy">Sort by</label>
+          <select id="sortBy">
+            <option value="date">Date</option>
+            <option value="city">City</option>
+            <option value="coins">Coins</option>
+            <option value="mood">Mood</option>
+            <option value="forecast_high">Forecast High</option>
+            <option value="actual_high">Actual High</option>
+            <option value="error_score">Error Score (|high|+|low|)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button id="sortDirBtn" class="button secondary" type="button">Descending</button>
+        <button id="clearBtn" class="button ghost" type="button">Clear Filters</button>
+      </div>
+
+      <div class="table-wrap" style="margin-top: 12px;">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>City</th>
+                <th>Forecast</th>
+                <th>Actual</th>
+                <th>Errors</th>
+                <th>Error Score</th>
+                <th>Coins</th>
+                <th>Mood</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <!-- rows render here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="statsBtn" class="button secondary" type="button">Back to My Stats</button>
+        <button id="refreshBtn" class="button" type="button">Refresh</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const statusEl = document.getElementById("status");
+    const countText = document.getElementById("countText");
+
+    const searchInput = document.getElementById("searchInput");
+    const cityFilter = document.getElementById("cityFilter");
+    const fromDateInput = document.getElementById("fromDate");
+    const toDateInput = document.getElementById("toDate");
+    const sortByInput = document.getElementById("sortBy");
+    const sortDirBtn = document.getElementById("sortDirBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const statsBtn = document.getElementById("statsBtn");
+    const tbody = document.getElementById("historyBody");
+
+    const state = {
+      rows: [],
+      sortDir: "desc",
+    };
+
+    function getUserId() {
+      const qs = new URLSearchParams(location.search).get("user_id");
+      if (qs && qs.trim()) {
+        localStorage.setItem("temps_user_id", qs.trim());
+        return qs.trim();
+      }
+      const legacy = localStorage.getItem("user_id");
+      const stored = localStorage.getItem("temps_user_id");
+      if (stored && stored.trim()) return stored.trim();
+      if (legacy && legacy.trim()) {
+        localStorage.setItem("temps_user_id", legacy.trim());
+        return legacy.trim();
+      }
+      return null;
+    }
+
+    function fmtNum(v, fallback = "—", decimals = 0) {
+      if (v === null || v === undefined || v === "") return fallback;
+      const n = Number(v);
+      if (Number.isNaN(n)) return fallback;
+      return decimals === 0 ? Math.round(n).toLocaleString() : n.toFixed(decimals);
+    }
+
+    function fmtRange(high, low) {
+      const h = fmtNum(high, null, 0);
+      const l = fmtNum(low, null, 0);
+      if (!h && !l) return "—";
+      if (!h) return `Low ${l}°`;
+      if (!l) return `High ${h}°`;
+      return `High ${h}° / Low ${l}°`;
+    }
+
+    function fmtDate(raw) {
+      if (!raw) return "—";
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return String(raw);
+      return d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    function moodLine(moodVal) {
+      const mood = Number(moodVal ?? 0);
+      if (mood >= 40) return "Quietly strong streak. Nice consistency.";
+      if (mood >= 30) return "Steady winds. Keep up the rhythm.";
+      if (mood >= 20) return "Momentum is building day by day.";
+      if (mood >= 10) return "Learning in progress — you’re getting better.";
+      return "Early on, and that is absolutely fine. Keep going.";
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function errorScore(row) {
+      return Math.abs(safeNumber(row.error_high)) + Math.abs(safeNumber(row.error_low));
+    }
+
+    function buildSearchText(row) {
+      return `${row.city_name || ""} ${row.msg || ""} ${row.date || ""}`.toLowerCase();
+    }
+
+    function buildCityOptions(rows) {
+      const items = new Map();
+      rows.forEach(r => {
+        if (r.city_key && !items.has(r.city_key)) {
+          items.set(r.city_key, r.city_name || "Unknown city");
+        }
+      });
+      const arr = [...items.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+
+      cityFilter.innerHTML = '<option value="">All cities</option>';
+      arr.forEach(([key, name]) => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = name;
+        cityFilter.appendChild(opt);
+      });
+    }
+
+    function dateToMs(dateStr) {
+      const t = Date.parse(dateStr);
+      return Number.isNaN(t) ? null : t;
+    }
+
+    function applyFiltersAndSort() {
+      const search = searchInput.value.trim().toLowerCase();
+      const cityValue = cityFilter.value;
+      const sortBy = sortByInput.value;
+      const from = fromDateInput.value ? Date.parse(fromDateInput.value) : null;
+      const toRaw = toDateInput.value ? Date.parse(toDateInput.value) : null;
+      const to = Number.isFinite(toRaw) ? (toRaw + (24 * 60 * 60 * 1000) - 1) : null;
+
+      let rows = state.rows.filter(row => {
+        if (cityValue && row.city_key !== cityValue) return false;
+
+        if (search) {
+          const hay = buildSearchText(row);
+          if (!hay.includes(search)) return false;
+        }
+
+        const d = dateToMs(row.date);
+        if (from !== null && d !== null && d < from) return false;
+        if (to !== null && d !== null && d > to) return false;
+
+        return true;
+      });
+
+      rows.sort((a, b) => {
+        const dir = state.sortDir === "asc" ? 1 : -1;
+        let cmp = 0;
+
+        if (sortBy === "date") {
+          const da = dateToMs(a.date);
+          const db = dateToMs(b.date);
+          cmp = (db || 0) - (da || 0);
+          if (cmp === 0) cmp = (safeNumber(b.id) - safeNumber(a.id));
+        } else if (sortBy === "city") {
+          cmp = (a.city_name || "Unknown city").localeCompare(b.city_name || "Unknown city");
+          if (cmp === 0) cmp = (dateToMs(b.date) || 0) - (dateToMs(a.date) || 0);
+        } else if (sortBy === "coins") {
+          cmp = safeNumber(a.coins) - safeNumber(b.coins);
+        } else if (sortBy === "mood") {
+          cmp = safeNumber(a.mood) - safeNumber(b.mood);
+        } else if (sortBy === "forecast_high") {
+          cmp = safeNumber(a.forecast_high) - safeNumber(b.forecast_high);
+          if (cmp === 0) cmp = safeNumber(a.forecast_low) - safeNumber(b.forecast_low);
+        } else if (sortBy === "actual_high") {
+          cmp = safeNumber(a.actual_high) - safeNumber(b.actual_high);
+          if (cmp === 0) cmp = safeNumber(a.actual_low) - safeNumber(b.actual_low);
+        } else if (sortBy === "error_score") {
+          cmp = errorScore(a) - errorScore(b);
+          if (cmp === 0) cmp = (safeNumber(a.error_high) + safeNumber(a.error_low)) - (safeNumber(b.error_high) + safeNumber(b.error_low));
+        }
+
+        return dir * cmp;
+      });
+
+      renderTable(rows);
+      countText.textContent = `${rows.length} of ${state.rows.length} entries shown`;
+
+      const latestMood = rows.find(r => r.mood !== null && r.mood !== undefined)?.mood ?? state.rows.find(r => r.mood !== null && r.mood !== undefined)?.mood;
+      statusEl.className = rows.length ? "status" : "status error";
+      statusEl.textContent = rows.length
+        ? `Showing ${rows.length} result${rows.length === 1 ? "" : "s"} · ${moodLine(latestMood)}`
+        : "No entries match your current filters.";
+    }
+
+    function renderTable(rows) {
+      tbody.innerHTML = "";
+
+      if (!rows.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.className = "empty";
+        td.colSpan = 8;
+        td.textContent = "No records found.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+
+        const tdDate = document.createElement("td");
+        tdDate.textContent = fmtDate(row.date);
+
+        const tdCity = document.createElement("td");
+        tdCity.textContent = row.city_name || "Unknown city";
+
+        const tdForecast = document.createElement("td");
+        tdForecast.textContent = fmtRange(row.forecast_high, row.forecast_low);
+
+        const tdActual = document.createElement("td");
+        tdActual.textContent = fmtRange(row.actual_high, row.actual_low);
+
+        const tdErrors = document.createElement("td");
+        tdErrors.textContent = fmtRange(row.error_high, row.error_low);
+
+        const tdErrScore = document.createElement("td");
+        tdErrScore.className = "muted";
+        tdErrScore.textContent = fmtNum(errorScore(row), "—", 2);
+
+        const tdCoins = document.createElement("td");
+        tdCoins.textContent = fmtNum(row.coins, "—", 2);
+
+        const tdMood = document.createElement("td");
+        tdMood.textContent = row.mood === null || row.mood === undefined ? "—" : Number(row.mood).toFixed(2);
+
+        const tdMsg = document.createElement("td");
+        tdMsg.className = "message-cell";
+        tdMsg.textContent = row.msg || "—";
+
+        tr.appendChild(tdDate);
+        tr.appendChild(tdCity);
+        tr.appendChild(tdForecast);
+        tr.appendChild(tdActual);
+        tr.appendChild(tdErrors);
+        tr.appendChild(tdErrScore);
+        tr.appendChild(tdCoins);
+        tr.appendChild(tdMood);
+        tr.appendChild(tdMsg);
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function loadCityNames(cityIds) {
+      if (!cityIds.length) return new Map();
+
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id, name")
+        .in("id", cityIds);
+
+      if (error || !Array.isArray(data)) return new Map();
+
+      const map = new Map();
+      data.forEach(c => map.set(Number(c.id), c.name || `City ${c.id}`));
+      return map;
+    }
+
+    async function loadHistory() {
+      statusEl.className = "status loading";
+      statusEl.textContent = "Loading your forecast history…";
+      countText.textContent = "";
+      tbody.innerHTML = "";
+      cityFilter.innerHTML = '<option value="">All cities</option>';
+
+      try {
+        const userId = getUserId();
+        if (!userId) {
+          statusEl.className = "status error";
+          statusEl.textContent = "No user ID found. Open this page from the same session where forecasts were created.";
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("daily_scores")
+          .select(`
+            id, user_id, city_id, date,
+            forecast_high, forecast_low,
+            actual_high, actual_low,
+            error_high, error_low,
+            coins, mood, msg
+          `)
+          .eq("user_id", userId)
+          .order("date", { ascending: false })
+          .order("id", { ascending: false });
+
+        if (error) throw error;
+
+        const rows = Array.isArray(data) ? data : [];
+        const ids = [...new Set(rows.map(r => r.city_id).filter(v => v !== null && v !== undefined))];
+        const cityMap = await loadCityNames(ids);
+
+        state.rows = rows.map(r => {
+          const cityKey = r.city_id == null ? "__unknown__" : String(r.city_id);
+          return {
+            ...r,
+            city_key: cityKey,
+            city_name: cityMap.get(Number(r.city_id)) || (r.city_id == null ? "Unknown city" : `City ${r.city_id}`)
+          };
+        });
+
+        buildCityOptions(state.rows);
+        applyFiltersAndSort();
+
+        statusEl.className = "status";
+        statusEl.textContent = state.rows.length
+          ? `Loaded ${state.rows.length} total record${state.rows.length === 1 ? "" : "s"} from daily_scores.`
+          : "No forecast entries found for this user yet.";
+      } catch (error) {
+        statusEl.className = "status error";
+        statusEl.textContent = `Could not load history: ${error.message || String(error)}`;
+      }
+    }
+
+    function wireEvents() {
+      searchInput.addEventListener("input", applyFiltersAndSort);
+      cityFilter.addEventListener("change", applyFiltersAndSort);
+      fromDateInput.addEventListener("change", applyFiltersAndSort);
+      toDateInput.addEventListener("change", applyFiltersAndSort);
+      sortByInput.addEventListener("change", applyFiltersAndSort);
+
+      sortDirBtn.addEventListener("click", () => {
+        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+        sortDirBtn.textContent = state.sortDir === "asc" ? "Ascending" : "Descending";
+        applyFiltersAndSort();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        cityFilter.value = "";
+        fromDateInput.value = "";
+        toDateInput.value = "";
+        sortByInput.value = "date";
+        state.sortDir = "desc";
+        sortDirBtn.textContent = "Descending";
+        applyFiltersAndSort();
+      });
+
+      refreshBtn.addEventListener("click", loadHistory);
+      statsBtn.addEventListener("click", () => (window.location.href = "stats.html"));
+    }
+
+    wireEvents();
+    loadHistory();
+  </script>
+</body>
+</html>
