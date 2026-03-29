@@ -623,7 +623,7 @@ if (hourlyForm) {
         city_id: cityId,
         city: city.name,
         date: selectedForecastDate,
-        hour: hour,
+        hour: selectedHour,
         temp: Number(val),
         user_id: userId
       });
