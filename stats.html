@@ -260,13 +260,10 @@
       try {
         const localUserId = localStorage.getItem("user_id");   // localStorage identity
         // const authUserId = userData?.user?.id;              // auth identity
-        if (!localUserId) {
-          statusEl.textContent = "Please load your user ID or create a user ID by making a daily forecast.";
-        }
 
-        if (userErr) {
+        if (!localUserId) {
           statusEl.className = "error";
-          statusEl.textContent = "No active session found in this browser. Please try again.";
+          statusEl.textContent = "Please load your user ID or create a user ID by making a daily forecast.";
           return;
         }
         
