@@ -583,91 +583,93 @@ if (dailyForm) {
 const hourlyForm = document.getElementById('hourlyForm');
 
 if (hourlyForm) {
-  hourlyForm.addEventListener('submit', async e => {
-    e.preventDefault();
-
-    if (!selectedHour) {
-      document.getElementById('status').innerHTML =
-        '<span style="color:red;">Select an hour first.</span>';
-      return;
-    }
-
-    const payload = [];
-    let blocked = false;
-
-    const etNow = getETNow();
-    const lastCutoff = new Date(etNow); // last cutoff of the day
-    lastCutoff.setHours(19, 0, 0, 0);
-    lastCutoff.setMinutes(lastCutoff.getMinutes() - 30);
-
-    const useTomorrow = etNow >= lastCutoff;
-
-    const selectedForecastDate = getETGameDateISO(useTomorrow);
-
-    document.querySelectorAll('.hourly-input').forEach(input => {
-      const val = input.value.trim();
-      if (!val) return;
-
-      const selectedHourNum = convertHourLabel(selectedHour); // convert hour to number
-      const selectedCutoff = getHourlyCutoff(etNow, selectedHourNum);
-      const cityId = Number(input.dataset.cityId);
-      const city = cities.find(c => c.id === cityId);
-      const forecastHour = Number(input.dataset.hour);
-      if (Number.isNaN(forecastHour)) return;
-
-      // block if forecasting today & past cutoff for each forecast type separately
-      if (!useTomorrow && etNow >= selectedCutoff) {
-        blocked = true;
-        return;
-      }
-
-      const payloadKey = `${cityId}-${selectedForecastDate}-${forecastHour}`;
-      const existing = payload.find(p =>
-        p.city_id === cityId &&
-        p.date === selectedForecastDate &&
-        p.hour === forecastHour
-      );
-
-      if (existing) {
-        existing.temp = Number(val); // safety in case duplicate DOM rows somehow appear
-      } else {
-        payload.push({
-          city_id: cityId,
-          city: city.name,
-          date: selectedForecastDate,
-          hour: forecastHour,
-          temp: Number(val),
-          user_id: userId
-        });
-    };
-
-    if (blocked) {
-      document.getElementById('status').innerHTML =
-        '<span style="color:red;">Cutoff passed for one or more hour selections.</span>';
-      return;
-    }
-
-    if (!payload.length) {
-      document.getElementById('status').innerHTML =
-        '<span style="color:red;">Enter at least one forecast.</span>';
-      return;
-    }
-
-    const { error } = await client
-      .from('hourly_forecasts')
-      .upsert(payload, { onConflict: 'user_id,city_id,date,hour' });
-
-    if (error) {
-      document.getElementById('status').innerHTML =
-        `<span style="color:red;">Save failed: ${error.message}</span>`;
-    } else {
-      document.getElementById('status').innerHTML =
-        `<span style="color:green;">Saved ${selectedHour} forecasts! 🐰</span>`;
-      await buildHourlyGrid(); // refresh to show saved values (including 6-hr high)
-    }
-  });
+  hourlyForm.addEventListener('submit', await handleHourlySubmit)
 }
 
+async function handleHourlySubmit(e) {
+  e.preventDefault();
+
+  if (!selectedHour) {
+    document.getElementById('status').innerHTML =
+      '<span style="color:red;">Select an hour first.</span>';
+    return;
+  }
+
+  const payload = [];
+  let blocked = false;
+
+  const etNow = getETNow();
+  const lastCutoff = new Date(etNow);
+  lastCutoff.setHours(19, 0, 0, 0);
+  lastCutoff.setMinutes(lastCutoff.getMinutes() - 30);
+  const useTomorrow = etNow >= lastCutoff;
+  const selectedForecastDate = getETGameDateISO(useTomorrow);
+  const selectedHourNum = convertHourLabel(selectedHour);
+  const selectedCutoff = getHourlyCutoff(etNow, selectedHourNum);
+
+  document.querySelectorAll('.hourly-input').forEach(input => {
+    const val = input.value.trim();
+    if (!val) return;
+
+    const cityId = Number(input.dataset.cityId);
+    const city = cities.find(c => c.id === cityId);
+    const inputHour = Number(input.dataset.hour);
+    if (Number.isNaN(inputHour)) return;
+
+    if (!useTomorrow && etNow >= selectedCutoff) {
+      blocked = true;
+      return;
+    }
+
+    const existing = payload.find(
+      p => p.city_id === cityId && p.date === selectedForecastDate && p.hour === inputHour
+    );
+
+    if (existing) {
+      existing.temp = Number(val); // safety duplicate guard
+    } else {
+      payload.push({
+        city_id: cityId,
+        city: city.name,
+        date: selectedForecastDate,
+        hour: inputHour,
+        temp: Number(val),
+        user_id: userId
+      });
+    }
+  });
+
+  if (blocked) {
+    document.getElementById('status').innerHTML =
+      '<span style="color:red;">Cutoff passed for one or more hour selections.</span>';
+    return;
+  }
+
+  if (!payload.length) {
+    document.getElementById('status').innerHTML =
+      '<span style="color:red;">Enter at least one forecast.</span>';
+    return;
+  }
+
+  const { error } = await client
+    .from('hourly_forecasts')
+    .upsert(payload, { onConflict: 'user_id,city_id,date,hour' });
+
+  if (error) {
+    document.getElementById('status').innerHTML =
+      `<span style="color:red;">Save failed: ${error.message}</span>`;
+  } else {
+    document.getElementById('status').innerHTML =
+      `<span style="color:green;">Saved ${selectedHour} forecasts! 🐰</span>`;
+    await buildHourlyGrid();
+  }
+}
+
+const hourlyForm = document.getElementById('hourlyForm');
+if (hourlyForm) {
+  hourlyForm.addEventListener('submit', handleHourlySubmit);
+}
+                              
 // Change dropdown
 
 const forecastDaySelect = document.getElementById('forecastDay');
