@@ -239,12 +239,6 @@
 
     .muted { color: #6b7280; }
 
-    .message-cell {
-      max-width: 260px;
-      white-space: normal;
-      word-break: break-word;
-    }
-
     .empty {
       text-align: center;
       color: #6b7280;
@@ -341,7 +335,7 @@
       <div class="controls">
         <div class="control">
           <label for="searchInput">Search</label>
-          <input id="searchInput" type="text" placeholder="City or message…" />
+          <input id="searchInput" type="text" placeholder="City…" />
         </div>
 
         <div class="control">
@@ -392,7 +386,6 @@
                 <th data-sort="color" data-label="Color">Color <span class="sort-arrow"></span></th>
                 <th data-sort="coins" data-label="Coins">Coins <span class="sort-arrow"></span></th>
                 <th data-sort="mood" data-label="Mood">Mood <span class="sort-arrow"></span></th>
-                <th>Message</th>
               </tr>
             </thead>
             <tbody id="historyBody"></tbody>
