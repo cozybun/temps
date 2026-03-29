@@ -259,11 +259,14 @@
       panel.style.display = "none";
 
       try {
-        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+          statusEl.textContent = "Pls load your user ID or create a user ID by making a daily forecast.";
+        }
 
         if (userErr || !userData?.user) {
           statusEl.className = "error";
-          statusEl.textContent = "No active session found in this browser. Please sign in, then return.";
+          statusEl.textContent = "No active session found in this browser. Pls try again.";
           return;
         }
 
