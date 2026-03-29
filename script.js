@@ -589,78 +589,139 @@ const hourlyForm = document.getElementById('hourlyForm');
 async function handleHourlySubmit(e) {
   e.preventDefault();
 
+  const status = document.getElementById("status");
   if (!selectedHour) {
-    document.getElementById('status').innerHTML =
-      '<span style="color:red;">Select an hour first.</span>';
+    status.innerHTML = '<span style="color:red;">Select an hour first.</span>';
     return;
   }
 
+  const markInvalidInput = (input) => {
+    if (!input) return;
+    input.style.borderColor = "#dc2626";      // red border
+    input.style.boxShadow = "0 0 0 1px #dc2626";
+    input.style.backgroundColor = "#fef2f2"; // light red background
+  };
+
+  const clearValidation = (input) => {
+    if (!input) return;
+    input.style.borderColor = "";
+    input.style.boxShadow = "";
+    input.style.backgroundColor = "";
+  };
+
+  // clear previous row errors
+  document.querySelectorAll(".hourly-validation-msg").forEach((el) => el.remove());
+  document.querySelectorAll(".hourly-input").forEach((input) => clearValidation(input));
+
   const payload = [];
   let blocked = false;
+  let hasValidationErrors = false;
+  const validationMessages = [];
 
   const etNow = getETNow();
   const lastCutoff = new Date(etNow);
   lastCutoff.setHours(19, 0, 0, 0);
   lastCutoff.setMinutes(lastCutoff.getMinutes() - 30);
+
   const useTomorrow = etNow >= lastCutoff;
   const selectedForecastDate = getETGameDateISO(useTomorrow);
   const selectedHourNum = convertHourLabel(selectedHour);
   const selectedCutoff = getHourlyCutoff(etNow, selectedHourNum);
+  const sixHrHourNum = getSixHrHourForSelectedLabel(selectedHour);
 
-  document.querySelectorAll('.hourly-input').forEach(input => {
+  // collect each city's values
+  const cityRows = new Map(); // cityId -> { hourlyVal, sixHrVal, sixHrInput }
+
+  document.querySelectorAll(".hourly-input").forEach((input) => {
     const val = input.value.trim();
     if (!val) return;
 
     const cityId = Number(input.dataset.cityId);
-    const city = cities.find(c => c.id === cityId);
     const inputHour = Number(input.dataset.hour);
-    if (Number.isNaN(inputHour)) return;
+    const numVal = Number(val);
+
+    if (Number.isNaN(cityId) || Number.isNaN(inputHour) || Number.isNaN(numVal)) return;
 
     if (!useTomorrow && etNow >= selectedCutoff) {
       blocked = true;
       return;
     }
 
-    const existing = payload.find(
-      p => p.city_id === cityId && p.date === selectedForecastDate && p.hour === inputHour
-    );
+    const city = cities.find((c) => c.id === cityId);
+    if (!city) return;
 
-    if (existing) {
-      existing.temp = Number(val); // safety duplicate guard
-    } else {
-      payload.push({
-        city_id: cityId,
-        city: city.name,
-        date: selectedForecastDate,
-        hour: inputHour,
-        temp: Number(val),
-        user_id: userId
-      });
+    const row = cityRows.get(cityId) || { hourlyVal: undefined, sixHrVal: undefined, sixHrInput: null, cityName: city.name };
+
+    if (inputHour === selectedHourNum) {
+      row.hourlyVal = numVal;
+    } else if (sixHrHourNum !== null && inputHour === sixHrHourNum) {
+      row.sixHrVal = numVal;
+      row.sixHrInput = input;
     }
+
+    cityRows.set(cityId, row);
+
+    payload.push({
+      city_id: cityId,
+      city: city.name,
+      date: selectedForecastDate,
+      hour: inputHour,
+      temp: numVal,
+      user_id: userId
+    });
   });
 
   if (blocked) {
-    document.getElementById('status').innerHTML =
-      '<span style="color:red;">Cutoff passed for one or more hour selections.</span>';
+    status.innerHTML = '<span style="color:red;">Cutoff passed for the hour selection.</span>';
     return;
   }
 
   if (!payload.length) {
-    document.getElementById('status').innerHTML =
-      '<span style="color:red;">Enter at least one forecast.</span>';
+    status.innerHTML = '<span style="color:red;">Enter at least 1 forecast.</span>';
     return;
   }
 
+  // block whole submit if any invalid row
+  cityRows.forEach((row, cityId) => {
+    if (sixHrHourNum === null || !row.sixHrInput) return;
+
+    const cityCard = document.querySelector(`#hourlyGrid .city-card[data-city-id="${cityId}"]`);
+    const msgHost = cityCard?.querySelector(".city-card-content");
+    if (!msgHost) return;
+
+    if (row.hourlyVal === undefined) {
+      hasValidationErrors = true;
+      markInvalidInput(row.sixHrInput);
+      validationMessages.push(`${row.cityName}: 6-hr high requires the hourly forecast.`);
+    } else if (row.sixHrVal < row.hourlyVal) {
+      hasValidationErrors = true;
+      markInvalidInput(row.sixHrInput);
+      validationMessages.push(
+        `${row.cityName}: 6-hr high (${row.sixHrVal}°F) must be >= hourly temp (${row.hourlyVal}°F).`
+      );
+    }
+
+    if (hasValidationErrors) {
+      msgHost.insertAdjacentHTML(
+        "beforeend",
+        `<div class="hourly-validation-msg" style="color:#dc2626; margin-top:.4rem;">Invalid: 6-hr high must be >= hourly temp.</div>`
+      );
+    }
+  });
+
+  if (hasValidationErrors) {
+    status.innerHTML = `<span style="color:red;">${validationMessages.join("<br>")}</span>`;
+    return; // save nothing if any city row is invalid
+  }
+
   const { error } = await client
-    .from('hourly_forecasts')
-    .upsert(payload, { onConflict: 'user_id,city_id,date,hour' });
+    .from("hourly_forecasts")
+    .upsert(payload, { onConflict: "user_id,city_id,date,hour" });
 
   if (error) {
-    document.getElementById('status').innerHTML =
-      `<span style="color:red;">Save failed: ${error.message}</span>`;
+    status.innerHTML = `<span style="color:red;">Save failed: ${error.message}</span>`;
   } else {
-    document.getElementById('status').innerHTML =
-      `<span style="color:green;">Saved ${selectedHour} forecasts! 🐰</span>`;
+    status.innerHTML = `<span style="color:green;">Saved ${selectedHour} forecasts! 🐰</span>`;
     await buildHourlyGrid();
   }
 }
