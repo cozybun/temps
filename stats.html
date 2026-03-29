@@ -234,11 +234,11 @@
     }
 
     function friendlyMoodLine(mood, streak) {
-      if (mood >= 90) return "Mood is glowing today — your forecasts are showing care and clarity. ✨";
-      if (mood >= 75) return "Nice rhythm. You’re keeping your forecasts in a good, steady place. 🌿";
-      if (mood >= 60) return "Solid progress. A small win every day compounds into stronger score days. ☀️";
-      if (mood >= 40) return "You’re in the learning zone. Keep it consistent and the trend should lift. 🌤️";
-      return "Don’t worry—momentum grows with regular forecasts and calm adjustments. 🌙";
+      if (mood >= 40) return "Mood is glowing today — your forecasts are showing care and clarity. ✨";
+      if (mood >= 30) return "Good rhythm. You’re keeping your forecasts in a solid, steady place. 🌿";
+      if (mood >= 20) return "Solid progress. A small win every day compounds into stronger score days. ☀️";
+      if (mood >= 10) return "You’re in the learning zone. Keep consistent and the trend should improve. 🌤️";
+      return "Keep cozy — momentum grows with regular forecasts and calm adjustments. 🌙";
     }
 
     function formatDate(raw) {
@@ -259,7 +259,7 @@
 
       try {
         const localUserId = localStorage.getItem("user_id");   // localStorage identity
-        const authUserId = userData?.user?.id;                 // auth identity
+        // const authUserId = userData?.user?.id;              // auth identity
         if (!localUserId) {
           statusEl.textContent = "Please load your user ID or create a user ID by making a daily forecast.";
         }
