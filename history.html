@@ -335,7 +335,7 @@
       <div class="controls">
         <div class="control">
           <label for="searchInput">Search</label>
-          <input id="searchInput" type="text" placeholder="City…" />
+          <input id="searchInput" type="text" placeholder="City or date…" />
         </div>
 
         <div class="control">
@@ -577,10 +577,7 @@
       let rows = state.rows.filter(row => {
         if (cityValue && row.city_key !== cityValue) return false;
 
-        if (search) {
-          const hay = buildSearchText(row);
-          if (!hay.includes(search)) return false;
-        }
+        if (search && !((r.city_name || "").toLowerCase().includes(search) || String(r.date || "").toLowerCase().includes(search) || fmtDate(r.date).toLowerCase().includes(search))) return false;
 
         const d = parseDate(row.date);
         if (from !== null && d !== 0 && d < from) return false;
