@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Stats</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #3b82f6;
+      --warm: #f59e0b;
+      --good: #10b981;
+      --soft: #f3f4f6;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #f8fbff, var(--bg));
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 24px 14px;
+    }
+
+    .wrap {
+      width: min(860px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .title {
+      font-size: 1.7rem;
+      font-weight: 750;
+      margin: 0;
+      letter-spacing: -0.01em;
+      color: #111827;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.98rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .status {
+      border-left: 4px solid var(--accent);
+      background: #eff6ff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      color: #1d4ed8;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      font-size: 1.45rem;
+      font-weight: 750;
+      color: #111827;
+      margin: 0;
+    }
+
+    .value.small {
+      font-size: 1rem;
+      font-weight: 650;
+    }
+
+    .meta {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      background: var(--accent);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    button:hover {
+      filter: brightness(1.03);
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .loading,
+    .error {
+      margin: 6px 0 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .error {
+      color: #991b1b;
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    @media (max-width: 640px) {
+      .title { font-size: 1.4rem; }
+      .grid { grid-template-columns: 1fr; }
+      .btn-row { justify-content: stretch; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 class="title">🌤️ My Stats</h1>
+      <p class="subtitle">A cozy snapshot of your current progress and how your forecasting is going today.</p>
+    </header>
+
+    <section class="card">
+      <div id="status" class="loading">Loading your personal stats…</div>
+
+      <div id="statsPanel" style="display:none;">
+        <div id="moodLine" class="status"></div>
+
+        <div class="grid">
+          <article class="stat">
+            <div class="label">Total Coins</div>
+            <p class="value" id="totalCoins">—</p>
+          </article>
+
+          <article class="stat">
+            <div class="label">Current Coins</div>
+            <p class="value" id="coins">—</p>
+          </article>
+
+          <article class="stat">
+            <div class="label">Current Streak</div>
+            <p class="value" id="currentStreak">—</p>
+          </article>
+
+          <article class="stat">
+            <div class="label">Mood</div>
+            <p class="value" id="mood">—</p>
+          </article>
+        </div>
+
+        <p class="meta" id="lastActive">Last active: —</p>
+
+        <div class="btn-row">
+          <button class="secondary" id="historyBtn" type="button">Go to My History</button>
+          <button id="refreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // Replace with your real values
+    const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const statusEl = document.getElementById("status");
+    const panel = document.getElementById("statsPanel");
+    const moodLine = document.getElementById("moodLine");
+    const totalCoinsEl = document.getElementById("totalCoins");
+    const coinsEl = document.getElementById("coins");
+    const currentStreakEl = document.getElementById("currentStreak");
+    const moodEl = document.getElementById("mood");
+    const lastActiveEl = document.getElementById("lastActive");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const historyBtn = document.getElementById("historyBtn");
+
+    function cleanNumber(v, fallback = 0, decimals = 2) {
+      if (v === null || v === undefined || Number.isNaN(v)) return fallback;
+      const n = Number(v);
+      if (Number.isInteger(n)) return n.toLocaleString();
+      return n.toFixed(decimals);
+    }
+
+    function friendlyMoodLine(mood, streak) {
+      if (mood >= 90) return "Mood is glowing today — your forecasts are showing care and clarity. ✨";
+      if (mood >= 75) return "Nice rhythm. You’re keeping your forecasts in a good, steady place. 🌿";
+      if (mood >= 60) return "Solid progress. A small win every day compounds into stronger score days. ☀️";
+      if (mood >= 40) return "You’re in the learning zone. Keep it consistent and the trend should lift. 🌤️";
+      return "Don’t worry—momentum grows with regular forecasts and calm adjustments. 🌙";
+    }
+
+    function formatDate(raw) {
+      if (!raw) return "—";
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    async function loadStats() {
+      statusEl.className = "loading";
+      statusEl.textContent = "Loading your personal stats…";
+      panel.style.display = "none";
+
+      try {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+
+        if (userErr || !userData?.user) {
+          statusEl.className = "error";
+          statusEl.textContent = "No active session found in this browser. Please sign in, then return.";
+          return;
+        }
+
+        const userId = userData.user.id;
+
+        const { data, error } = await supabase
+          .from("user_stats")
+          .select("mood, current_streak, total_coins, coins, last_active")
+          .eq("user_id", userId)
+          .single();
+
+        if (error) {
+          if (error.code === "PGRST116") {
+            statusEl.className = "error";
+            statusEl.textContent = "No stats row yet for this user. Scores appear here once forecasts get scored.";
+            return;
+          }
+          throw error;
+        }
+
+        const mood = Number(data.mood ?? 0);
+        const streak = Number(data.current_streak ?? 0);
+
+        totalCoinsEl.textContent = cleanNumber(Number(data.total_coins ?? 0), 0, 2);
+        coinsEl.textContent = cleanNumber(Number(data.coins ?? 0), 0, 2);
+        currentStreakEl.textContent = cleanNumber(streak, 0, 0);
+        moodEl.textContent = cleanNumber(mood, 0, 2);
+
+        moodLine.textContent = friendlyMoodLine(mood, streak);
+        lastActiveEl.textContent = `Last active: ${formatDate(data.last_active)}`;
+
+        statusEl.style.display = "none";
+        panel.style.display = "block";
+      } catch (err) {
+        statusEl.className = "error";
+        statusEl.textContent = `Could not load stats: ${err.message ?? String(err)}`;
+      }
+    }
+
+    refreshBtn.addEventListener("click", loadStats);
+
+    historyBtn.addEventListener("click", () => {
+      // Rename this if your history file is different
+      window.location.href = "history.html";
+    });
+
+    loadStats();
+  </script>
+</body>
+</html>
