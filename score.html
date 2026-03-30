@@ -40,6 +40,13 @@
       overflow-x: hidden;
     }
 
+    #scoreList p {
+      width: 100%;
+      flex: 1 1 100%;
+      text-align: center;
+      margin: 24px 0;
+    }
+
     .score-row {
       flex: 1;
       min-width: 140px;
@@ -55,18 +62,19 @@
       transform: scale(1) translateY(0);
     }
 
-    .page-controls {
+    .page-controls{
       display: flex;
       flex-direction: column;
       gap: 10px;
+      align-items: center;
     }
-
-    .menu-btn,
-    .top-nav a {
+    
+    .menu-btn{
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 40px;          /* forces same height */
+      height: 40px;
+      min-width: 140px;
       padding: 0 14px;
       font-size: 14px;
       border: 1px solid #d1d5db;
@@ -75,12 +83,15 @@
       color: #111827;
       text-decoration: none;
       box-sizing: border-box;
+      text-align: center;
+      white-space: nowrap;
     }
     
-    .top-nav {
+    .top-nav{
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      justify-content: center;
     }
     
     .city {
