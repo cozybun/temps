@@ -13,6 +13,11 @@
       --accent: #b48aff;
       --accent-2: #c59cff;
       --border: #e9deff;
+      --media-border: #dbcfff;
+      --media-bg: #f3edff;
+      --media-text: #9b73ff;
+      --media-small: #8f6dff;
+      --media-muted: #7759d1;
     }
 
     * { box-sizing: border-box; }
@@ -49,18 +54,37 @@
       margin: 0 auto 1.2rem;
       width: 100%;
       aspect-ratio: 16 / 9;
-      border: 2px dashed #c4b5fd;
+      border: 2px dashed var(--media-border);
       border-radius: 12px;
-      background: #ede9fe;
+      background: var(--media-bg);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #7c3aed;
+      text-align: center;
+      padding: 1rem;
+      color: var(--media-text);
       font-weight: 600;
     }
 
-    .media-slot small {
-      color: #6d28d9;
+    #placeholderText {
+      color: var(--media-small);
+    }
+
+    .learn-copy {
+      display: none;
+      text-align: center;
+      color: var(--media-muted);
+      line-height: 1.5;
+      max-width: 100%;
+    }
+
+    .learn-copy.visible {
+      display: block;
+      animation: fadeIn .2s ease-out;
+    }
+
+    .hidden {
+      display: none;
     }
 
     .actions {
@@ -80,28 +104,14 @@
     }
 
     #learnBtn {
-      background: #ede9fe;
-      color: #4c1d95;
-      border: 1px solid #ddd6fe;
+      background: #efe6ff;
+      color: #7446d6;
+      border: 1px solid #dfd2ff;
     }
 
     #tryBtn {
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
       color: white;
-    }
-
-    .panel {
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
-      margin-top: 0.25rem;
-      color: var(--muted);
-      line-height: 1.5;
-      display: none;
-    }
-
-    .panel.visible {
-      display: block;
-      animation: fadeIn .2s ease-out;
     }
 
     .muted {
@@ -121,6 +131,7 @@
         grid-template-columns: 1fr;
       }
       h1 { font-size: 1.45rem; }
+      .media-slot { padding: 0.75rem; }
     }
   </style>
 </head>
@@ -128,23 +139,23 @@
   <main class="page">
     <h1>🐰 Temps With Friends 🔮</h1>
 
-    <section class="media-slot" aria-label="Media or animation area">
-      <small>Image / animation placeholder</small>
+    <section class="media-slot" id="mediaSlot" aria-label="Media or info area">
+      <small id="placeholderText">Image / animation placeholder</small>
+
+      <div id="learnPanel" class="learn-copy">
+        <p>
+          This app lets you make daily and hourly weather forecasts by city and scores them with actual temperatures.
+          Use it to save forecasts, track your accuracy, and build better forecasting skills over time.
+        </p>
+        <p>
+          Click <strong>Try</strong> to start your first forecasts.
+        </p>
+      </div>
     </section>
 
     <div class="actions">
       <button type="button" id="learnBtn">Learn</button>
       <button type="button" id="tryBtn">Try</button>
-    </div>
-
-    <div id="learnPanel" class="panel">
-      <p>
-        This app lets you make daily and hourly weather forecasts by city and scores them with actual temperatures.
-        Use it to save forecasts, track your accuracy, and build better forecasting skills over time.
-      </p>
-      <p>
-        Click <strong>Try</strong> to start your first forecasts.
-      </p>
     </div>
 
     <div class="muted">Add an animation or pic in the placeholder area later.</div>
@@ -154,14 +165,24 @@
     const learnBtn = document.getElementById("learnBtn");
     const tryBtn = document.getElementById("tryBtn");
     const learnPanel = document.getElementById("learnPanel");
+    const placeholderText = document.getElementById("placeholderText");
 
+    // Toggle text inside placeholder area with Learn button
     learnBtn.addEventListener("click", () => {
-      learnPanel.classList.toggle("visible");
-      learnBtn.textContent = learnPanel.classList.contains("visible") ? "Hide Info" : "Learn";
+      const isShowing = learnPanel.classList.toggle("visible");
+      placeholderText.classList.toggle("hidden", isShowing);
+      learnBtn.textContent = isShowing ? "Hide Info" : "Learn";
     });
 
+    // Show same centered text in the placeholder area on Try click
     tryBtn.addEventListener("click", () => {
-      window.location.href = "daily.html";
+      learnPanel.classList.add("visible");
+      placeholderText.classList.add("hidden");
+      learnBtn.textContent = "Learn"; // reset button label state
+
+      setTimeout(() => {
+        window.location.href = "daily.html";
+      }, 100);
     });
   </script>
 </body>
