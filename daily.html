@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐰 Temps With Friends 🔮</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div style="text-align:center; margin:1rem 0;">
+    <a href="hourly.html">
+      <button style="padding:0.8rem 1.4rem; background:#9b59b6; color:#fff; border:none; border-radius:8px; cursor:pointer;">
+        Go to Hourly Forecasts
+      </button>
+    </a>
+  </div>
+  
+  <input id="forecastType" type="hidden" value="daily">
+  <h1>My Daily Forecasts</h1>
+
+  <form id="tempsForm">
+
+    <div style="text-align:center; margin:1rem 0;">
+      <label>
+        Forecast for:
+        <select id="forecastDay">
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+        </select>
+      </label>
+      <div id="currentDateWrapper" style="margin-top:6px;">
+        <span id="currentDate"></span>
+        <span class="pt-info">
+          ⓘ
+          <span class="pt-tooltip">Dates shown in Pacific Time (PT)</span>
+        </span>
+      </div>
+    </div>
+
+    <p style="text-align:center; margin:1rem 0;">Cutoff = noon local time | Yesterday's actuals shown for reference</p>
+    
+    <div id="dailyGrid" class="city-grid">
+      <!-- JS will fill with city cards -->
+    </div>
+  
+    <div style="text-align:center; margin: 2rem 0;">
+      <button type="submit" id="submitDailyBtn">Save My Daily Forecasts 🐰</button>
+    </div>
+  </form>
+  
+  <div id="status" style="text-align:center; margin-top:1rem; min-height:1.5rem;"></div>
+
+  <!-- Reveal Button -->
+  <div style="text-align:center; margin:2rem 0;">
+    <button id="revealBtn"> 🐰 Show My Score </button>
+  </div>
+
+  <div id="revealResults"></div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
