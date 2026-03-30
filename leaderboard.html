@@ -278,7 +278,6 @@
     const statusEl = document.getElementById("status");
     const rowsEl = document.getElementById("rows");
     const refreshBtn = document.getElementById("refreshBtn");
-    const countPill = document.getElementById("countPill");
 
     const headers = {
       apikey: SUPABASE_ANON_KEY,
@@ -323,7 +322,6 @@
 
       if (!players.length) {
         rowsEl.innerHTML = `<li class="empty">No users yet.</li>`;
-        countPill.textContent = "0 players";
         return;
       }
 
@@ -342,7 +340,6 @@
         return { ...p, rank };
       });
 
-      countPill.textContent = `${ranked.length} players`;
       statusEl.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
       for (const p of ranked) {
