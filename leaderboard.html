@@ -289,6 +289,8 @@
     const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=id,username,coins`;
     const SOURCE_LABEL = "leaderboard view";
 
+    const formatNumber = (value) => Number(value || 0).toLocaleString("en-US");
+
     function sanitizeUsername(username) {
       const u = (username || "").trim();
       return u ? u : "anon";
@@ -306,7 +308,7 @@
       if (i === 1) return "🥇";
       if (i === 2) return "🥈";
       if (i === 3) return "🥉";
-      return `#${i}`;
+      return `#${formatNumber(i)}`;
     }
 
     function getRankClass(i) {
@@ -350,7 +352,7 @@
         li.innerHTML = `
           <div class="rank ${rankClass}">${rankEmoji(p.rank)}</div>
           <div class="name" title="${p.username}">${p.username}</div>
-          <div class="coins"><span class="spark">⭐</span>${p.coins} coins</div>
+          <div class="coins"><span class="spark">⭐</span>${formatNumber(p.coins)} coins</div>
         `;
         rowsEl.appendChild(li);
       }
