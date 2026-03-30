@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard</title>
+  <style>
+    :root{
+      --bg1: #fffaf5;
+      --bg2: #f7f3ff;
+      --card: #fffdf9;
+      --card-soft: #f7f6ff;
+      --ink: #2f2a40;
+      --muted: #6b647d;
+      --line: #e9e3f7;
+      --accent: #b77cff;
+      --accent-2: #ff9a76;
+      --accent-3: #6ee7f1;
+      --gold: #d4a017;
+      --silver: #9ca3af;
+      --bronze: #b46f2f;
+      --shadow: 0 14px 30px rgba(78, 56, 128, 0.14);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255, 238, 191, 0.5), transparent 20%),
+        radial-gradient(circle at 85% 25%, rgba(183, 124, 255, 0.20), transparent 25%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      text-align: center;
+    }
+
+    .app {
+      width: min(980px, 100%);
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+      background: linear-gradient(140deg, #ffffffdd, #fef7ffcc);
+      border: 1px solid #ecdff9;
+      border-radius: 24px;
+      padding: 18px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      font-weight: 750;
+      letter-spacing: 0.2px;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.97rem;
+      text-align: center;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 0.92rem;
+      font-weight: 650;
+      cursor: pointer;
+      background: linear-gradient(120deg, #b77cff, #a78bfa);
+      color: #fff;
+      transition: transform .12s ease, filter .12s ease;
+      box-shadow: 0 8px 18px rgba(158, 106, 255, 0.28);
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    button:active { transform: translateY(1px); }
+
+    .pill {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #f3ecff;
+      color: #6244a1;
+      border: 1px solid #d8c9f3;
+      font-weight: 650;
+      text-align: center;
+    }
+
+    .board {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .board-head {
+      padding: 12px 16px;
+      background: linear-gradient(to right, #ffefe5, #f6ecff);
+      border-bottom: 1px solid #e9ddf6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+      flex-wrap: wrap;
+    }
+
+    .board-head strong {
+      font-size: 1rem;
+      letter-spacing: 0.2px;
+      text-align: center;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .list-wrap {
+      max-height: 62vh;
+      overflow: auto;
+      padding: 6px;
+    }
+
+    .player-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      width: 100%;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 64px 1fr auto;
+      align-items: center;
+      justify-items: center;
+      gap: 12px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      margin: 4px 4px;
+      background: var(--card-soft);
+      border: 1px solid #efe8fb;
+      transition: transform .12s ease, background .15s ease;
+      text-align: center;
+    }
+
+    .row:hover {
+      background: #fff;
+      transform: translateX(2px);
+    }
+
+    .rank {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      background: #fff7eb;
+      border: 1px solid #ffe0ba;
+      color: #7d560b;
+      text-align: center;
+    }
+
+    .rank.gold { background: #fff4cf; border-color: #ffd77c; color: #8d6300; }
+    .rank.silver { background: #f6f6f8; border-color: #d1d5db; color: #545860; }
+    .rank.bronze { background: #f4e7d8; border-color: #f0cda3; color: #8d5633; }
+
+    .name {
+      font-weight: 650;
+      font-size: 1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .coins {
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #edfcff;
+      color: #0b5565;
+      border: 1px solid #c7f0f7;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.9rem;
+      text-align: center;
+      justify-self: center;
+    }
+
+    .coins .spark {
+      margin-right: 6px;
+    }
+
+    .empty, .error {
+      text-align: center;
+      color: var(--muted);
+      padding: 26px 16px;
+      font-size: 0.95rem;
+    }
+
+    .error {
+      color: #8b1a2f;
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      h1 { font-size: 1.4rem; }
+      .row {
+        grid-template-columns: 52px 1fr auto;
+        padding: 10px;
+      }
+      .rank { width: 40px; height: 40px; }
+      .coins { font-size: 0.82rem; padding: 7px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="header">
+      <div class="title-row">
+        <div>
+          <h1>🔮 Temps Leaderboard 🔮</h1>
+          <p class="subtitle"> View top users & you </strong>.</p>
+        </div>
+        <span class="pill" id="countPill">— players</span>
+      </div>
+      <div class="toolbar">
+        <button id="refreshBtn">Refresh</button>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="board-head">
+        <strong>Monthly Standings</strong>
+        <span class="status" id="status">Loading…</span>
+      </div>
+      <div class="list-wrap">
+        <ul class="player-list" id="rows">
+          <li class="empty">Loading leaderboard…</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
+
+    const statusEl = document.getElementById("status");
+    const rowsEl = document.getElementById("rows");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const countPill = document.getElementById("countPill");
+
+    function sanitizeUsername(username) {
+      const u = (username || "").trim();
+      return u ? u : "anon";
+    }
+
+    function parseCoins(userStats) {
+      if (!userStats) return 0;
+
+      // could be array (if one-to-many) or object (if single relation)
+      if (Array.isArray(userStats)) {
+        if (!userStats.length) return 0;
+        return Number(userStats[0]?.coins || 0);
+      }
+      return Number(userStats.coins || 0);
+    }
+
+    function rankEmoji(i) {
+      if (i === 1) return "🥇";
+      if (i === 2) return "🥈";
+      if (i === 3) return "🥉";
+      return `#${i}`;
+    }
+
+    function getRankClass(i) {
+      if (i === 1) return "gold";
+      if (i === 2) return "silver";
+      if (i === 3) return "bronze";
+      return "";
+    }
+
+    function render(rows) {
+      rowsEl.innerHTML = "";
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        rowsEl.innerHTML = `<li class="empty">No players yet.</li>`;
+        countPill.textContent = `0 players`;
+        return;
+      }
+
+      const players = rows.map((r) => ({
+        username: sanitizeUsername(r.username),
+        coins: parseCoins(r.user_stats),
+      }));
+
+      players.sort((a, b) => {
+        if (b.coins !== a.coins) return b.coins - a.coins;
+        return a.username.localeCompare(b.username);
+      });
+
+      let rank = 0;
+      let lastCoins = null;
+      const ranked = players.map((p, idx) => {
+        if (p.coins !== lastCoins) {
+          rank = idx + 1;
+          lastCoins = p.coins;
+        }
+        return { ...p, rank };
+      });
+
+      countPill.textContent = `${ranked.length} players`;
+      statusEl.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+      for (const p of ranked) {
+        const li = document.createElement("li");
+        li.className = "row";
+        const rankClass = getRankClass(p.rank);
+        li.innerHTML = `
+          <div class="rank ${rankClass}">
+            ${rankEmoji(p.rank)}
+          </div>
+          <div class="name" title="${p.username}">${p.username}</div>
+          <div class="coins"><span class="spark">⭐</span>${p.coins} coins</div>
+        `;
+        rowsEl.appendChild(li);
+      }
+    }
+
+    async function fetchLeaderboard() {
+      statusEl.textContent = "Loading…";
+      rowsEl.innerHTML = `<li class="empty">Loading leaderboard…</li>`;
+
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/users?select=id,username,user_stats(coins)`,
+          {
+            method: "GET",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Request failed (${res.status}): ${text}`);
+        }
+
+        const data = await res.json();
+        render(data || []);
+      } catch (err) {
+        statusEl.textContent = "Failed to load";
+        rowsEl.innerHTML = `<li class="error">Could not load leaderboard. Check URL/key + policy permissions.</li>`;
+        console.error(err);
+      }
+    }
+
+    refreshBtn.addEventListener("click", fetchLeaderboard);
+    fetchLeaderboard();
+  </script>
+</body>
+</html>
