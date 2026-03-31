@@ -801,7 +801,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (btn) {
     btn.addEventListener("click", function () {
       window.location.href = `score.html?mode=${isHourlyPage ? 'hourly' : 'daily'}`;
-    }
+    })
   }
 };
 
