@@ -803,7 +803,7 @@ document.addEventListener("DOMContentLoaded", function () {
       window.location.href = `score.html?mode=${isHourlyPage ? 'hourly' : 'daily'}`;
     })
   }
-};
+});
 
 // Start page
 
