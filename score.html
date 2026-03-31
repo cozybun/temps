@@ -327,7 +327,8 @@
     </div>
 
     <div class="mode-toggle" role="tablist" aria-label="Score mode">
-      <button id="dailyModeBtn" type="button">Daily</button>
+      <button id="dailyModeBtn" type="button"> Daily </button>
+      <button id="hourlyModeBtn" type="button"> Hourly </button>
     </div>
   </div>
 
@@ -592,11 +593,7 @@
         c.className = 'stat-item';
         c.textContent = `🔥 Streak: ${bestStreak}`;
 
-        const d = document.createElement('div');
-        d.className = 'stat-item';
-        d.textContent = `📏 Avg |error|: ${avg === null ? '—' : avg.toFixed(2)}°`;
-
-        el.stats.append(a, b, c, d);
+        el.stats.append(a, b, c);
 
         rows.forEach((r, i) => {
           const card = document.createElement('article');
@@ -630,7 +627,7 @@
 
           const streak = document.createElement('div');
           streak.className = 'coin';
-          streak.textContent = `🔥 ${r.streak}`;
+          streak.textContent = `⭐ ${r.streak}`;
 
           card.append(city, icon, msg, details, coins, streak);
           frag.append(card);
@@ -656,11 +653,7 @@
         c.className = 'stat-item';
         c.textContent = `🪙 Coins: ${totalCoins}`;
 
-        const d = document.createElement('div');
-        d.className = 'stat-item';
-        d.textContent = `📏 Avg |error|: ${avg === null ? '—' : avg.toFixed(2)}°`;
-
-        el.stats.append(a, b, c, d);
+        el.stats.append(a, b, c);
 
         rows.forEach((r, i) => {
           const card = document.createElement('article');
