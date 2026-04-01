@@ -322,8 +322,7 @@
 
   <div class="page-controls">
     <div class="top-nav">
-      <a class="menu-btn back-btn" href="/"> ←Back </a>
-      <a class="menu-btn" href="./daily.html"> Daily </a>
+      <a class="menu-btn back-btn" href="daily.html"> ← Back </a>
     </div>
 
     <div class="mode-toggle" role="tablist" aria-label="Score mode">
@@ -344,19 +343,10 @@
   <script>
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0';
-    const SCORES_TABLE = 'scores';
-
-    const MODE_KEYS = {
-      daily: { modeColumn: 'mode', modeValue: 'daily' },
-      hourly: { modeColumn: 'mode', modeValue: 'hourly' }
-    };
-
-    const DATE_KEYS = ['score_date', 'date', 'created_at', 'played_at', 'submitted_at', 'timestamp'];
 
     const state = {
       targetDate: getDateFromQuery(),
       mode: new URLSearchParams(location.search).get('from') === 'hourly' ? 'hourly' : 'daily',
-      rowsCache: { daily: null, hourly: null },
       rows: { daily: [], hourly: [] },
       supabase: null,
       loading: false
@@ -372,6 +362,22 @@
       shareSection: document.getElementById('shareSection'),
       shareBtn: document.getElementById('shareBtn'),
       shareStatus: document.getElementById('shareStatus')
+    };
+
+    const MODE_CONFIG = {
+      daily: {
+        table: "daily_scores",
+        dateKeys: ["date"],
+        orderBy: [{ column: "date", ascending: false }]
+      },
+      hourly: {
+        table: "hourly_scores",
+        dateKeys: ["date"],
+        orderBy: [
+          { column: "date", ascending: false },
+          { column: "hour", ascending: true }
+        ]
+      }
     };
 
     function init() {
@@ -492,13 +498,12 @@
 
     function normalizeRow(row, mode) {
       return {
-        city: pick(row, ['city', 'location', 'name']) || 'Unknown city',
+        city: pick(row, ['city', 'location', 'name', 'city_name']) || (row.city_id != null ? `City ${row.city_id}` : 'Unknown city'),
         hour: pick(row, ['hour', 'slot', 'forecast_hour', 'time']) || '—',
         forecast: pick(row, ['forecast', 'forecast_temp', 'predicted', 'prediction', 'guess']),
         actual: pick(row, ['actual', 'actual_temp', 'observed', 'result_temp', 'real']),
         error: pick(row, ['error', 'error_value', 'difference', 'delta']),
         coins: Number(pick(row, ['coins', 'coin', 'score', 'points'])) || 0,
-        message: pick(row, ['message', 'result_message']),
         mood: pick(row, ['mood', 'mood_bonus_reason']),
         streak: Number(pick(row, ['streak', 'streak_count', 'streak_total'])) || 0,
         isMissing: Boolean(pick(row, ['missing', 'is_missing']) || row.status === 'missing'),
@@ -520,22 +525,6 @@
       if (!isNaN(d.getTime())) return isoDate(d);
 
       return null;
-    }
-
-    function rowMatchesDate(row) {
-      const target = isoDate(state.targetDate);
-      let hadDateLikeField = false;
-
-      for (const key of DATE_KEYS) {
-        const raw = row?.[key];
-        if (raw === undefined || raw === null || raw === '') continue;
-        hadDateLikeField = true;
-        const parsed = toDateIso(raw);
-        if (parsed === target) return true;
-      }
-
-      // If row has no date-like field at all, show it (avoids dropping legacy rows)
-      return !hadDateLikeField;
     }
 
     function line(label, value) {
@@ -560,10 +549,36 @@
       el.shareStatus.textContent = '';
     }
 
+    function sortRows(rows, mode) {
+      if (mode === 'hourly') {
+        return [...rows].sort((a, b) => {
+          const byHour = toHour(a.hour) - toHour(b.hour);
+          if (byHour !== 0) return byHour;
+          return String(a.city).localeCompare(String(b.city));
+        });
+      }
+      return [...rows];
+    }
+
+    function rowMatchesDate(row, mode = state.mode) {
+      const target = isoDate(state.targetDate);
+      const cfg = MODE_CONFIG[mode];
+      const dateKeys = cfg?.dateKeys || ["date"];
+    
+      for (const key of dateKeys) {
+        const raw = row?.[key];
+        if (raw === undefined || raw === null || raw === "") continue;
+        const parsed = toDateIso(raw);
+        if (parsed === target) return true;
+      }
+    
+      return false; // if schema mismatch, do not include rows
+    }
+
     function renderFromCache(mode, animate = true) {
       clearRows();
-      const rows = state.rows[mode];
-      if (!rows || rows.length === 0) {
+      const rows = sortRows(state.rows[mode] || [], mode);
+      if (!rows.length) {
         el.list.innerHTML = `<div class="empty-state">No ${mode} scores for this date yet.</div>`;
         return;
       }
@@ -573,12 +588,7 @@
       if (mode === 'daily') {
         const cities = rows.length;
         const totalCoins = rows.reduce((acc, r) => acc + (Number(r.coins) || 0), 0);
-        const absErrors = rows
-          .map((r) => Number(r.error))
-          .filter((n) => Number.isFinite(n))
-          .map((n) => Math.abs(n));
 
-        const avg = absErrors.length ? absErrors.reduce((a, b) => a + b, 0) / absErrors.length : null;
         const bestStreak = rows.reduce((m, r) => Math.max(m, Number(r.streak) || 0), 0);
 
         const a = document.createElement('div');
@@ -608,10 +618,6 @@
           icon.className = 'result-circle';
           icon.textContent = resultCircle(r.error);
 
-          const msg = document.createElement('div');
-          msg.className = 'msg';
-          msg.textContent = r.message || '';
-
           const details = document.createElement('div');
           details.className = 'detail';
           details.append(
@@ -629,7 +635,7 @@
           streak.className = 'coin';
           streak.textContent = `⭐ ${r.streak}`;
 
-          card.append(city, icon, msg, details, coins, streak);
+          card.append(city, icon, details, coins, streak);
           frag.append(card);
 
           if (animate) setTimeout(() => card.classList.add('visible'), 25 * i);
@@ -638,8 +644,6 @@
       } else {
         const cityCount = new Set(rows.map((r) => r.city)).size;
         const totalCoins = rows.reduce((acc, r) => acc + (Number(r.coins) || 0), 0);
-        const absErrors = rows.map((r) => Number(r.error)).filter((n) => Number.isFinite(n)).map((n) => Math.abs(n));
-        const avg = absErrors.length ? absErrors.reduce((a, b) => a + b, 0) / absErrors.length : null;
 
         const a = document.createElement('div');
         a.className = 'stat-item';
@@ -685,7 +689,6 @@
           coins.className = 'coin';
           coins.textContent = `🪙 ${r.coins}`;
 
-          // NOTE: No circles, no message, no streak in hourly
           card.append(top, details, coins);
           frag.append(card);
 
@@ -697,32 +700,55 @@
       el.list.append(frag);
     }
 
+    function isColumnMissingError(err) {
+      if (!err) return false;
+      const msg = String(err.message || '');
+      return err.code === '42703' || /column .* does not exist/i.test(msg);
+    }
+
     async function loadMode(mode) {
-      if (state.rowsCache[mode]) return state.rowsCache[mode];
-
-      const { modeColumn, modeValue } = MODE_KEYS[mode];
-      const query = state.supabase.from(SCORES_TABLE).select('*').eq(modeColumn, modeValue);
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const rows = (data || [])
-        .filter((r) => rowMatchesDate(r))
-        .map((r) => normalizeRow(r, mode));
-
-      if (mode === 'hourly') {
-        rows.sort((a, b) => {
-          const ah = toHour(a.hour);
-          const bh = toHour(b.hour);
-          if (ah !== bh) return ah - bh;
-          return a.city.localeCompare(b.city, 'en', { sensitivity: 'base' });
-        });
-      } else {
-        rows.sort((a, b) => a.city.localeCompare(b.city, 'en', { sensitivity: 'base' }));
+      const cfg = MODE_CONFIG[mode];
+      if (!cfg) throw new Error(`Unknown mode: ${mode}`);
+    
+      if (state.rows[mode] && state.rows[mode].length) return state.rows[mode]; // return cache
+    
+      let rows = null;
+      let lastError = null;
+    
+      for (const order of cfg.orderBy || []) { // try configured order-by columns
+        const result = await state.supabase
+          .from(cfg.table)
+          .select("*")
+          .order(order.column, { ascending: order.ascending });
+    
+        if (!result.error) {
+          rows = result.data || [];
+          break;
+        }
+    
+        if (isColumnMissingError(result.error)) {
+          lastError = result.error;
+          continue; // try next candidate if any
+        }
+    
+        lastError = result.error;
+        break;
       }
-
-      state.rowsCache[mode] = rows;
-      return rows;
+    
+      if (rows === null) {
+        const fallback = await state.supabase.from(cfg.table).select("*");
+        if (fallback.error) throw fallback.error;
+        rows = fallback.data || [];
+      } else if (lastError) {
+        console.warn("Ordering fallback used due to schema difference:", lastError);
+      }
+    
+      const normalized = (rows || [])
+        .map((r) => normalizeRow(r, mode))
+        .filter((r) => rowMatchesDate(r.raw, mode));
+    
+      state.rows[mode] = normalized;
+      return normalized;
     }
 
     async function loadAndRender(mode, animate = true) {
@@ -733,8 +759,9 @@
         state.rows[mode] = rows;
         renderFromCache(mode, animate);
       } catch (err) {
-        console.error(err);
-        setError('Failed to load scores. Check your Supabase table/permissions.');
+        const detail = err?.code ? `[${err.code}] ${err.message || 'Unknown error'}` : (err?.message || 'Unknown error');
+        console.error('Supabase load error:', err);
+        setError(`Failed to load ${mode} scores: ${detail}`);
         el.list.innerHTML = `<div class="empty-state">Failed to load ${mode} scores.</div>`;
       } finally {
         state.loading = false;
