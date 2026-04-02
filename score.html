@@ -402,12 +402,12 @@
     });
 
     const userId = localStorage.getItem("temps_user_id");
-    const GAME_TZ = "America/Los_Angeles";
 
     const MONTH_NAMES = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
+      "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"
     ];
+
+    const hasValue = (v) => v !== null && v !== undefined && v !== "";
 
     function ymdToShift(ymd, deltaDays) {
       const [y, m, d] = ymd.split("-").map(Number);
@@ -421,18 +421,21 @@
     }
 
     function dateLabelFromYMD(ymd) {
-      const [, m, d] = ymd.split("-");
-      return `${MONTH_NAMES[Number(m) - 1]} ${Number(d)}`;
+      const parts = String(ymd ?? "").split("-");
+      if (parts.length < 3) return "Invalid date";
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      return `${MONTH_NAMES[m - 1] ?? "Invalid"} ${Number.isFinite(d) ? d : ""}`.trim();
     }
 
-    const todayInGameTz = new Intl.DateTimeFormat("en-CA", {
-      timeZone: GAME_TZ,
+    const todayInPT = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     }).format(new Date());
 
-    const ydayDate = ymdToShift(todayInGameTz, -1);
+    const ydayDate = ymdToShift(todayInPT, -1);
     const ydayLabel = dateLabelFromYMD(ydayDate);
     document.getElementById("scoreDate").textContent = ydayLabel;
 
@@ -450,6 +453,11 @@
     const modeDailyBtn = document.getElementById("modeDailyBtn");
     const modeHourlyBtn = document.getElementById("modeHourlyBtn");
 
+    function getInitialMode() {
+      const urlMode = new URLSearchParams(window.location.search).get("mode");
+      return urlMode === "hourly" ? "hourly" : "daily";
+    }
+
     function getValue(row, keys) {
       for (const key of keys) {
         const v = row?.[key];
@@ -459,62 +467,28 @@
     }
 
     function hasHourlyForecast(row) {
-      return (
-        getValue(row, ["forecast_temp", "forecast", "predicted_temp", "forecast_value", "temp_forecast", "guess", "prediction"]) !== null ||
-        (row.forecast_high !== null && row.forecast_high !== undefined) ||
-        (row.forecast_low !== null && row.forecast_low !== undefined)
-      );
+      const direct = getValue(row, ["forecast_temp", "forecast", "predicted_temp", "forecast_value", "temp_forecast", "guess", "prediction"]);
+      return direct !== null || hasValue(row.forecast);
     }
 
     function hourlyForecastText(row) {
-      const direct = getValue(row, ["forecast_temp", "forecast", "predicted_temp", "forecast_value", "temp_forecast", "guess", "prediction"]);
-      if (direct !== null) return `${formatTemp(direct)}°`;
-      if (row.forecast_high !== null && row.forecast_high !== undefined && row.forecast_low !== null && row.forecast_low !== undefined) {
-        return `H ${formatTemp(row.forecast_high)}° / L ${formatTemp(row.forecast_low)}°`;
-      }
-      if (row.forecast_high !== null && row.forecast_high !== undefined) return `${formatTemp(row.forecast_high)}°`;
-      if (row.forecast_low !== null && row.forecast_low !== undefined) return `${formatTemp(row.forecast_low)}°`;
-      return "—";
+      const direct = getValue(row, ["forecast", "forecast_temp", "predicted_temp", "forecast_value", "temp_forecast", "guess", "prediction"]);
+      return direct === null ? "—" : `${formatTemp(direct)}°`;
     }
 
     function hourlyActualText(row) {
-      const direct = getValue(row, ["actual_temp", "actual", "temp_actual", "actual_value"]);
-      if (direct !== null) return `${formatTemp(direct)}°`;
-      if (row.actual_high !== null && row.actual_high !== undefined && row.actual_low !== null && row.actual_low !== undefined) {
-        return `H ${formatTemp(row.actual_high)}° / L ${formatTemp(row.actual_low)}°`;
-      }
-      if (row.actual_high !== null && row.actual_high !== undefined) return `${formatTemp(row.actual_high)}°`;
-      if (row.actual_low !== null && row.actual_low !== undefined) return `${formatTemp(row.actual_low)}°`;
-      return "—";
+      const direct = getValue(row, ["actual", "actual_temp", "temp_actual", "actual_value"]);
+      return direct === null ? "—" : `${formatTemp(direct)}°`;
     }
-
+    
     function hourlyErrorText(row) {
       const direct = getValue(row, ["error", "error_temp", "temp_error", "error_value"]);
-      if (direct !== null) return `${formatSignedNumber(direct)}°`;
-      if (row.error_high !== null && row.error_high !== undefined && row.error_low !== null && row.error_low !== undefined) {
-        return `H ${formatSignedNumber(row.error_high)}° / L ${formatSignedNumber(row.error_low)}°`;
-      }
-      if (row.error_high !== null && row.error_high !== undefined) return `${formatSignedNumber(row.error_high)}°`;
-      if (row.error_low !== null && row.error_low !== undefined) return `${formatSignedNumber(row.error_low)}°`;
-      return "—";
+      return direct === null ? "—" : `${formatAbs(direct)}°`;
     }
 
     function formatTemp(v) {
-      if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
-        return "—";
-      }
+      if (!hasValue(v) || Number.isNaN(Number(v))) return "—";
       return `${Math.round(Number(v))}`;
-    }
-
-    function isHourlyModeRow(row) {
-      const modeHint = String(row?.mode ?? row?.forecast_mode ?? row?.score_mode ?? row?.type ?? "").toLowerCase();
-      if (modeHint === "hourly" || modeHint === "hour") return true;
-      return (
-        (row?.hour !== null && row?.hour !== undefined) ||
-        (row?.forecast_hour !== null && row?.forecast_hour !== undefined) ||
-        (row?.time_slot !== null && row?.time_slot !== undefined) ||
-        (row?.hour_of_day !== null && row?.hour_of_day !== undefined)
-      );
     }
 
     function updateModeUI(mode) {
@@ -539,9 +513,8 @@
       if (hourlyStatsHide) hourlyStatsHide.style.display = isDaily ? "flex" : "none";
     }
 
-    // Keep circles for daily only
+    // Render circles for daily only
     function renderCityCircles(scores) {
-      if (activeMode !== "daily") return;
       cityCircleString = cityCirclesFromScores(scores || []);
       const el = document.getElementById("cityCircles");
       if (el) el.textContent = cityCircleString;
@@ -553,33 +526,6 @@
       loadScore();
     }
 
-    async function fetchScoresByMode(mode) {
-      if (mode === "hourly") {
-        const hourlyTbl = await client
-          .from("hourly_scores")
-          .select("*")
-          .eq("user_id", userId)
-          .eq("date", ydayDate)
-          .order("city_id");
-
-        if (!hourlyTbl.error && hourlyTbl.data && hourlyTbl.data.length) {
-          return hourlyTbl;
-        }
-
-        return {
-          data: (fallback.data || []).filter(isHourlyModeRow),
-          error: null,
-        };
-      }
-
-      return client
-        .from("daily_scores")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("date", ydayDate)
-        .order("city_id");
-    }
-
     let cityCircleString = "⚪ ⚪ ⚪";
 
     function cityCirclesFromScores(scores) {
@@ -589,12 +535,6 @@
           return resultCircle(row || {});
         })
         .join(" ");
-    }
-
-    function renderCityCircles(scores) {
-      cityCircleString = cityCirclesFromScores(scores || []);
-      const el = document.getElementById("cityCircles");
-      if (el) el.textContent = cityCircleString;
     }
 
     let totalCoins = 0;
@@ -668,11 +608,16 @@
       requestAnimationFrame(update);
     }
 
-    function format(v) {
+    function formatAbs(v) {
       if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) {
         return "—";
       }
       return `${Math.abs(Math.round(Number(v)))}`;
+    }
+
+    function toNumOrDash(v) {
+      if (!hasValue(v) || Number.isNaN(Number(v))) return "—";
+      return `${Math.round(Number(v))}`;
     }
 
     function cityDisplay(row) {
@@ -684,15 +629,17 @@
     }
 
     function hasForecast(row) {
-      return row.forecast_high != null && row.forecast_low != null;
+      return row.forecast_high != null || row.forecast_low != null;
     }
 
     function resultCircle(row) {
       if (!row || !hasForecast(row)) return "⚪";
-      const errorHigh = Number(row.error_high);
-      if (!Number.isFinite(errorHigh)) return "⚪";
-
-      const e = Math.abs(Math.round(errorHigh));
+    
+      const errorVal = hasValue(row.error_high) ? row.error_high : row.error_low;
+      const errNum = Number(errorVal);
+      if (!hasValue(errorVal) || !Number.isFinite(errNum)) return "⚪";
+    
+      const e = Math.abs(Math.round(errNum));
       if (e <= 1) return "🟢";
       if (e <= 3) return "🟡";
       return "🔴";
@@ -746,7 +693,6 @@
             document.getElementById("moodTotal").textContent = "0";
             document.getElementById("currentStreak").textContent = "0";
           }
-          renderCityCircles([]);
         }
         return;
       }
@@ -823,25 +769,13 @@
           }
         }
 
-        revealRows(0);
+        revealRows(0, isHourly);
         return;
       }
 
       list.innerHTML = "";
       totalCoins = 0;
       totalMood = 0;
-
-      const getField = (obj, keys) => {
-        for (const k of keys) {
-          if (obj[k] !== null && obj[k] !== undefined && obj[k] !== "") return obj[k];
-        }
-        return null;
-      };
-      const prettyErr = (v) => (v === null || v === undefined ? "—" : formatSignedNumber(v));
-      const toNumOrDash = (v) => {
-        const n = Number(v);
-        return Number.isFinite(n) ? `${Math.round(n)}°` : "—";
-      };
 
       scores.forEach((s) => {
         const forecasted = isHourly ? hasHourlyForecast(s) : hasForecast(s); // check if there are forecasts for each mode
@@ -852,32 +786,9 @@
         }
 
         if (isHourly) { // hourly score
-          const hourlyForecast = (() => {
-            const direct = getField(s, ["forecast", "forecast_temp", "predicted_temp", "guess", "prediction"]);
-            if (direct !== null) return toNumOrDash(direct);
-            if (s.forecast_high !== undefined && s.forecast_low !== undefined) return `H ${toNumOrDash(s.forecast_high)} / L ${toNumOrDash(s.forecast_low)}`;
-            if (s.forecast_high !== undefined) return `H ${toNumOrDash(s.forecast_high)}`;
-            if (s.forecast_low !== undefined) return `L ${toNumOrDash(s.forecast_low)}`;
-            return "—";
-          })();
-
-          const hourlyActual = (() => {
-            const direct = getField(s, ["actual", "actual_temp", "temp_actual"]);
-            if (direct !== null) return toNumOrDash(direct);
-            if (s.actual_high !== undefined && s.actual_low !== undefined) return `H ${toNumOrDash(s.actual_high)} / L ${toNumOrDash(s.actual_low)}`;
-            if (s.actual_high !== undefined) return `H ${toNumOrDash(s.actual_high)}`;
-            if (s.actual_low !== undefined) return `L ${toNumOrDash(s.actual_low)}`;
-            return "—";
-          })();
-
-          const hourlyError = (() => {
-            const direct = getField(s, ["error", "temp_error", "error_temp", "error_value", "error_high", "error_low"]);
-            if (direct !== null) return prettyErr(direct);
-            if (s.error_high !== undefined && s.error_low !== undefined) return `H ${prettyErr(s.error_high)} / L ${prettyErr(s.error_low)}`;
-            if (s.error_high !== undefined) return `H ${prettyErr(s.error_high)}`;
-            if (s.error_low !== undefined) return `L ${prettyErr(s.error_low)}`;
-            return "—";
-          })();
+          const hourlyForecast = hourlyForecastText(s);
+          const hourlyActual = hourlyActualText(s);
+          const hourlyError = hourlyErrorText(s);
 
           const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
           const rowClass = forecasted ? "score-row" : "score-row missing";
@@ -902,15 +813,15 @@
           const detailHtml = forecasted
             ? `
               My Forecasts:<br>
-              H ${s.forecast_high}° / L ${s.forecast_low}°
+              H ${toNumOrDash(s.forecast_high)}° / L ${toNumOrDash(s.forecast_low)}°
               <br>
               Actual Temps:
               <br>
-              H ${s.actual_high}° / L ${s.actual_low}°
+              H ${toNumOrDash(s.actual_high)}° / L ${toNumOrDash(s.actual_low)}°
               <br>
               Accuracy (Error):
               <br>
-              H ${format(s.error_high)}° / L ${format(s.error_low)}°
+              H ${formatAbs(s.error_high)}° / L ${formatAbs(s.error_low)}°
             `
             : `No forecasts submitted for yesterday`;
 
@@ -935,7 +846,6 @@
       });
 
       if (isHourly) {
-        renderCityCircles([]);
         if (typeof animateNumber === "function") {
           animateNumber("coinTotal", totalCoins, 800);
         } else {
@@ -953,10 +863,10 @@
         buildShare(scores, totalCoins, totalMood, currentStreak);
       }
 
-      revealRows(scores.length);
+      revealRows(scores.length, isHourly);
     }
 
-    function revealRows(rowCount) {
+    function revealRows(rowCount, isHourlyMode) {
       const rows = document.querySelectorAll(".score-row");
 
       rows.forEach((row, i) => {
@@ -967,7 +877,7 @@
 
       setTimeout(() => {
         animateNumber("coinTotal", totalCoins, 800);
-        if (!isHourly) {
+        if (!isHourlyMode) {
           animateSignedNumber("moodTotal", totalMood, 800);
           animateNumber("currentStreak", currentStreak, 800);
         }
@@ -1069,7 +979,7 @@
 
     if (modeDailyBtn) modeDailyBtn.addEventListener("click", () => setMode("daily"));
     if (modeHourlyBtn) modeHourlyBtn.addEventListener("click", () => setMode("hourly"));
-    setMode("daily");
+    setMode(getInitialMode());
   </script>
 </body>
 </html>
