@@ -814,7 +814,12 @@
         }
 
         if (isHourly) { // hourly score
-          renderHourlyScores(response.hourly ?? response.scores ?? []);
+          scores.forEach((s) => {
+            const forecasted = hasHourlyForecast(s);
+            if (forecasted) totalCoins += Number(s.coins || 0);
+          });
+
+          renderHourlyScores(scores);
           /* const hourlyForecast = hourlyForecastText(s);
           const hourlyActual = hourlyActualText(s);
           const hourlyError = hourlyErrorText(s);
