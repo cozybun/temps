@@ -934,8 +934,7 @@
           <div class="hourly-sub">Forecast: ${s.forecast_temp ?? s.forecast ?? "-"}</div>
           <div class="hourly-sub">Actual: ${s.actual_temp ?? s.actual ?? "-"}</div>
           <div class="hourly-sub">Error: ${s.error ?? "-"}</div>
-          <div class="hourly-sub">Coins: ${s.coins ?? "-"}</div>
-          const coinText = forecasted ? `🪙 +${Number(s.coins || 0)}` : `🪙 +0`;
+          <div class="hourly-sub">Coins: 🪙 +${Number(s.coins || 0)}</div>
         `;
         container.appendChild(card);
       });
