@@ -174,7 +174,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1080px;
+      min-width: 860px;
     }
 
     thead th {
@@ -270,34 +270,6 @@
       flex-wrap: wrap;
     }
 
-    .accuracy-cell {
-      text-align: center;
-    }
-
-    .accuracy-dot {
-      width: 0.85rem;
-      height: 0.85rem;
-      border-radius: 9999px;
-      display: inline-block;
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
-    }
-
-    .accuracy-dot.green {
-      background: #008000;
-    }
-
-    .accuracy-dot.yellow {
-      background: #FFFF00;
-    }
-
-    .accuracy-dot.red {
-      background: #FF0000;
-    }
-
-    .accuracy-dot.gray {
-      background: #808080;
-    }
-
     @media (max-width: 960px) {
       .controls {
         grid-template-columns: repeat(2, minmax(150px, 1fr));
@@ -326,7 +298,7 @@
   <main class="wrap">
     <header>
       <h1 class="title">📖 My Forecast History</h1>
-      <p class="subtitle">Filter, search, sort by clicking headers, and paginate forecasts from <strong>My Daily Scores</strong>.</p>
+      <p class="subtitle">Filter, search, sort by clicking headers, and paginate forecasts from <strong>My Hourly Scores</strong>.</p>
     </header>
 
     <section class="card">
@@ -379,13 +351,12 @@
             <thead>
               <tr>
                 <th data-sort="date" data-label="Date">Date <span class="sort-arrow"></span></th>
+                <th data-sort="hour" data-label="Hr">Hr <span class="sort-arrow"></span></th>
                 <th data-sort="city" data-label="City">City <span class="sort-arrow"></span></th>
                 <th data-sort="forecast" data-label="Forecast">Forecast <span class="sort-arrow"></span></th>
                 <th data-sort="actual" data-label="Actual">Actual <span class="sort-arrow"></span></th>
                 <th data-sort="accuracy" data-label="Accuracy (Error)">Accuracy (Error) <span class="sort-arrow"></span></th>
-                <th data-sort="color" data-label="Color">Color <span class="sort-arrow"></span></th>
                 <th data-sort="coins" data-label="Coins">Coins <span class="sort-arrow"></span></th>
-                <th data-sort="mood" data-label="Mood">Mood <span class="sort-arrow"></span></th>
               </tr>
             </thead>
             <tbody id="historyBody"></tbody>
@@ -434,13 +405,12 @@
 
     const defaultSortDirection = {
       date: "desc",
+      hour: "desc",
       city: "asc",
       forecast: "desc",
       actual: "desc",
       accuracy: "desc",
-      color: "asc",   // best to worst on first click
-      coins: "desc",
-      mood: "desc"
+      coins: "desc"
     };
 
     const state = {
@@ -473,14 +443,16 @@
       return Number.isFinite(n) ? n : 0;
     }
 
-    function fmtNum(v, fallback = "—", decimals = 0) {
-      if (v === null || v === undefined || v === "") return fallback;
-      const n = Number(v);
-      if (Number.isNaN(n)) return fallback;
-      return decimals === 0 ? Math.round(n).toLocaleString() : n.toFixed(decimals);
+    function resolveValue(row, keys) {
+      for (const k of keys) {
+        if (Object.prototype.hasOwnProperty.call(row, k)) {
+          const v = row[k];
+          if (v !== null && v !== undefined && v !== "") return v;
+        }
+      }
+      return null;
     }
 
-    // show integers without decimals when possible, show 1 decimal otherwise
     function fmtIntOrDecimal(v, fallback = "—") {
       if (v === null || v === undefined || v === "") return fallback;
       const n = Number(v);
@@ -489,15 +461,6 @@
         return Math.trunc(n).toLocaleString();
       }
       return n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    }
-
-    function fmtRange(high, low) {
-      const h = fmtNum(high, "", 0);
-      const l = fmtNum(low, "", 0);
-      if (!h && !l) return "—";
-      if (!h) return `Low ${l}°`;
-      if (!l) return `High ${h}°`;
-      return `High ${h}° / Low ${l}°`;
     }
 
     function fmtDate(raw) {
@@ -516,8 +479,31 @@
       return Number.isNaN(t) ? 0 : t;
     }
 
-    function buildSearchText(row) {
-      return `${row.city_name || ""} ${row.date || ""}`.toLowerCase();
+    function toDateObj(raw) {
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function hourFromRow(row) {
+      const direct = resolveValue(row, ["hour", "hr", "hour_of_day", "forecast_hour"]);
+      if (direct !== null) {
+        const h = Number(direct);
+        if (Number.isFinite(h)) {
+          return ((h % 24) + 24) % 24;
+        }
+      }
+
+      const d = toDateObj(resolveValue(row, ["date", "created_at", "forecast_at", "timestamp", "createdAt"]));
+      if (!d) return null;
+      return d.getHours();
+    }
+
+    function formatHourLabel(hour, rowDate) {
+      const h = Number(hour);
+      if (Number.isFinite(h)) return String(Math.trunc(((h % 24) + 24) % 24)).padStart(2, "0");
+      const d = toDateObj(rowDate);
+      if (!d) return "—";
+      return String(d.getHours()).padStart(2, "0");
     }
 
     function buildCityOptions(rows) {
@@ -543,27 +529,16 @@
         th.classList.toggle("active-sort", isSorted);
 
         const label = th.dataset.label || th.textContent.replace("▲", "").replace("▼", "").trim();
-        const arrow = th.querySelector(".sort-arrow");
         th.innerHTML = `${label} <span class="sort-arrow">${isSorted ? (state.sortDir === "asc" ? "▲" : "▼") : ""}</span>`;
       });
     }
 
-    function scoreDotState(errorHigh) {
-      const n = Number(errorHigh);
-      if (!Number.isFinite(n)) {
-        return { className: "gray", title: "No score data" };
-      }
-      if (n <= 1) return { className: "green", title: "Score: 0/1 (green)" };
-      if (n <= 3) return { className: "yellow", title: "Score: 2/3 (yellow)" };
-      return { className: "red", title: "Score: 4+ (red)" };
-    }
-
-    function colorSortRank(errorHigh) {
-      const n = Number(errorHigh);
-      if (!Number.isFinite(n)) return 4; // unknown => last
-      if (n <= 1) return 1;             // green
-      if (n <= 3) return 2;             // yellow
-      return 3;                         // red
+    function getValueForSort(row, key) {
+      if (key === "forecast") return safeNumber(row.forecast_value);
+      if (key === "actual") return safeNumber(row.actual_value);
+      if (key === "accuracy") return safeNumber(row.error_value);
+      if (key === "coins") return safeNumber(row.coins);
+      return 0;
     }
 
     function applyFiltersAndSort() {
@@ -577,11 +552,16 @@
       let rows = state.rows.filter(row => {
         if (cityValue && row.city_key !== cityValue) return false;
 
-        if (search && !((row.city_name || "").toLowerCase().includes(search) || String(row.date || "").toLowerCase().includes(search) || fmtDate(row.date).toLowerCase().includes(search))) return false;
+        const rowDate = row.date || "";
+        const dateNum = parseDate(rowDate);
+        if (search) {
+          const searchable =
+            `${row.city_name || ""} ${row.date || ""} ${formatHourLabel(row.hour, rowDate)} ${fmtDate(rowDate)}`.toLowerCase();
+          if (!searchable.includes(search)) return false;
+        }
 
-        const d = parseDate(row.date);
-        if (from !== null && d !== 0 && d < from) return false;
-        if (to !== null && d !== 0 && d > to) return false;
+        if (from !== null && dateNum !== 0 && dateNum < from) return false;
+        if (to !== null && dateNum !== 0 && dateNum > to) return false;
 
         return true;
       });
@@ -591,32 +571,28 @@
 
         if (sortBy === "date") {
           cmp = parseDate(a.date) - parseDate(b.date);
+          if (cmp === 0) cmp = (a.hour || 0) - (b.hour || 0);
           if (cmp === 0) cmp = safeNumber(a.id) - safeNumber(b.id);
+        } else if (sortBy === "hour") {
+          cmp = (a.hour || -1) - (b.hour || -1);
+          if (cmp === 0) {
+            cmp = parseDate(a.date) - parseDate(b.date);
+            if (cmp === 0) cmp = safeNumber(a.id) - safeNumber(b.id);
+          }
         } else if (sortBy === "city") {
           cmp = (a.city_name || "Unknown city").localeCompare(b.city_name || "Unknown city");
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "forecast") {
-          cmp = safeNumber(a.forecast_high) - safeNumber(b.forecast_high);
-          if (cmp === 0) cmp = safeNumber(a.forecast_low) - safeNumber(b.forecast_low);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "actual") {
-          cmp = safeNumber(a.actual_high) - safeNumber(b.actual_high);
-          if (cmp === 0) cmp = safeNumber(a.actual_low) - safeNumber(b.actual_low);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "accuracy") {
-          cmp = safeNumber(a.error_high) - safeNumber(b.error_high);
-          if (cmp === 0) cmp = safeNumber(a.error_low) - safeNumber(b.error_low);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "color") {
-          cmp = colorSortRank(a.error_high) - colorSortRank(b.error_high);
-          if (cmp === 0) cmp = safeNumber(a.error_high) - safeNumber(b.error_high);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "coins") {
-          cmp = safeNumber(a.coins) - safeNumber(b.coins);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
-        } else if (sortBy === "mood") {
-          cmp = safeNumber(a.mood) - safeNumber(b.mood);
-          if (cmp === 0) cmp = parseDate(a.date) - parseDate(b.date);
+          if (cmp === 0) {
+            cmp = parseDate(a.date) - parseDate(b.date);
+            if (cmp === 0) cmp = (a.hour || 0) - (b.hour || 0);
+            if (cmp === 0) cmp = safeNumber(a.id) - safeNumber(b.id);
+          }
+        } else if (sortBy === "forecast" || sortBy === "actual" || sortBy === "accuracy" || sortBy === "coins") {
+          cmp = getValueForSort(a, sortBy) - getValueForSort(b, sortBy);
+          if (cmp === 0) {
+            cmp = parseDate(a.date) - parseDate(b.date);
+            if (cmp === 0) cmp = (a.hour || 0) - (b.hour || 0);
+            if (cmp === 0) cmp = safeNumber(a.id) - safeNumber(b.id);
+          }
         }
 
         return state.sortDir === "asc" ? cmp : -cmp;
@@ -646,7 +622,7 @@
         const tr = document.createElement("tr");
         const td = document.createElement("td");
         td.className = "empty";
-        td.colSpan = 9;
+        td.colSpan = 7;
         td.textContent = total === 0 ? "No records found." : "No records on this page.";
         tr.appendChild(td);
         tbody.appendChild(tr);
@@ -657,42 +633,31 @@
           const tdDate = document.createElement("td");
           tdDate.textContent = fmtDate(row.date);
 
+          const tdHour = document.createElement("td");
+          tdHour.textContent = formatHourLabel(row.hour, row.date);
+
           const tdCity = document.createElement("td");
           tdCity.textContent = row.city_name || "Unknown city";
 
           const tdForecast = document.createElement("td");
-          tdForecast.textContent = fmtRange(row.forecast_high, row.forecast_low);
+          tdForecast.textContent = fmtIntOrDecimal(row.forecast_value, "—");
 
           const tdActual = document.createElement("td");
-          tdActual.textContent = fmtRange(row.actual_high, row.actual_low);
+          tdActual.textContent = fmtIntOrDecimal(row.actual_value, "—");
 
           const tdErrors = document.createElement("td");
-          tdErrors.textContent = fmtRange(row.error_high, row.error_low);
-
-          const tdColor = document.createElement("td");
-          tdColor.className = "accuracy-cell";
-          const dotState = scoreDotState(row.error_high);
-          const dot = document.createElement("span");
-          dot.className = `accuracy-dot ${dotState.className}`;
-          dot.title = dotState.title;
-          dot.setAttribute("aria-label", dotState.title);
-          tdColor.appendChild(dot);
+          tdErrors.textContent = fmtIntOrDecimal(row.error_value, "—");
 
           const tdCoins = document.createElement("td");
           tdCoins.textContent = fmtIntOrDecimal(row.coins, "—");
 
-          const tdMood = document.createElement("td");
-          tdMood.className = "muted";
-          tdMood.textContent = fmtIntOrDecimal(row.mood, "—");
-
           tr.appendChild(tdDate);
+          tr.appendChild(tdHour);
           tr.appendChild(tdCity);
           tr.appendChild(tdForecast);
           tr.appendChild(tdActual);
           tr.appendChild(tdErrors);
-          tr.appendChild(tdColor);
           tr.appendChild(tdCoins);
-          tr.appendChild(tdMood);
           tbody.appendChild(tr);
         }
       }
@@ -706,10 +671,14 @@
     }
 
     function renderStatus() {
+      if (state.rows.length === 0) {
+        statusEl.className = "status";
+        statusEl.textContent = "No forecast entries found for this user yet.";
+        return;
+      }
+
       statusEl.className = "status";
-      statusEl.textContent = state.rows.length
-        ? `Loaded ${state.rows.length} total record${state.rows.length === 1 ? "" : "s"} from My Daily Scores.`
-        : "No forecast entries found for this user yet.";
+      statusEl.textContent = `Loaded ${state.rows.length} total record${state.rows.length === 1 ? "" : "s"} from My Hourly Scores.`;
 
       if (state.filteredRows.length === 0) {
         statusEl.className = "status error";
@@ -728,7 +697,7 @@
       if (error || !Array.isArray(data)) return new Map();
 
       const map = new Map();
-      data.forEach(c => map.set(Number(c.id), c.name || `City ${c.id}`));
+      data.forEach(c => map.set(String(c.id), c.name || `City ${c.id}`));
       return map;
     }
 
@@ -747,30 +716,36 @@
         }
 
         const { data, error } = await supabase
-          .from("daily_scores")
-          .select(`
-            id, user_id, city_id, date,
-            forecast_high, forecast_low,
-            actual_high, actual_low,
-            error_high, error_low,
-            coins, mood
-          `)
+          .from("score_forecasts")
+          .select("*")
           .eq("user_id", userId)
-          .order("date", { ascending: false })
           .order("id", { ascending: false });
 
         if (error) throw error;
 
         const rows = Array.isArray(data) ? data : [];
-        const ids = [...new Set(rows.map(r => r.city_id).filter(v => v !== null && v !== undefined))];
-        const cityMap = await loadCityNames(ids);
+        const cityIds = [...new Set(rows.map(r => r.city_id).filter(v => v !== null && v !== undefined))];
+        const cityMap = await loadCityNames(cityIds);
 
         state.rows = rows.map(r => {
           const cityKey = r.city_id == null ? "__unknown__" : String(r.city_id);
           return {
             ...r,
+            date: resolveValue(r, ["date", "created_at", "forecast_at", "timestamp", "createdAt"]) || "",
+            hour: hourFromRow(r),
             city_key: cityKey,
-            city_name: cityMap.get(Number(r.city_id)) || (r.city_id == null ? "Unknown city" : `City ${r.city_id}`)
+            city_name: cityMap.get(cityKey) || (r.city_id == null ? "Unknown city" : `City ${r.city_id}`),
+            forecast_value: resolveValue(r, [
+              "forecast", "forecast_temp", "temp_forecast", "forecast_value",
+              "predicted_temp", "predicted", "forecast_high", "forecast_low"
+            ]),
+            actual_value: resolveValue(r, [
+              "actual", "actual_temp", "temp_actual", "actual_value",
+              "actual_high", "actual_low"
+            ]),
+            error_value: resolveValue(r, [
+              "error", "error_temp", "temp_error", "accuracy_error", "error_high", "error_low"
+            ])
           };
         });
 
