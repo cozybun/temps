@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forecast History</title>
+  <title> My Forecast History </title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -337,8 +337,8 @@
 <body>
   <main class="wrap">
     <header>
-      <h1 class="title">📖 My Forecast History</h1>
-      <p class="subtitle">Filter, search, sort by clicking headers, and paginate your forecast scores.</p>
+      <h1 class="title"> 📖 My Forecast History </h1>
+      <p class="subtitle">Filter, search, sort by clicking headers, and paginate my forecasts</p>
     </header>
 
     <section class="card">
@@ -1032,12 +1032,10 @@
     });
 
     statsBtn.addEventListener("click", () => {
-      // keep as you had it; this just goes to stats page
       window.location.href = "stats.html";
     });
 
-    // Initialize
-    state.pageSize = parseInt(pageSizeInput.value, 10) || 50;
+    state.pageSize = parseInt(pageSizeInput.value, 10) || 50; // initialize
     setModeStyles();
     updateDateHeaderLabel();
     loadData();
