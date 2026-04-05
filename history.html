@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title> My Forecast History </title>
+  <title> Forecast History </title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -105,7 +105,9 @@
       font-weight: 600;
     }
 
-    input[type="text"], input[type="date"], select {
+    input[type="text"],
+    input[type="date"],
+    select {
       width: 100%;
       border: 1px solid #d1d5db;
       background: #fff;
@@ -302,7 +304,6 @@
       display: inline-block;
       box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
       vertical-align: middle;
-      margin-right: 6px;
     }
 
     .accuracy-dot.green { background: #10b981; }
@@ -338,11 +339,11 @@
   <main class="wrap">
     <header>
       <h1 class="title"> 📖 My Forecast History </h1>
-      <p class="subtitle">Filter, search, sort by clicking headers, and paginate my forecasts</p>
+      <p class="subtitle">Filter, search, sort by clicking headers, and paginate forecasts.</p>
     </header>
 
     <section class="card">
-      <div id="status" class="status loading">Loading your forecast history…</div>
+      <div id="status" class="status loading">Loading my forecast history…</div>
 
       <div class="controls">
         <div class="control">
@@ -463,16 +464,14 @@
         label: "Daily",
         dateLabel: "Date",
         hasHour: false,
-        select:
-          "id, user_id, city_id, date, forecast_high, forecast_low, actual_high, actual_low, error_high, error_low, coins, mood"
+        select: "*"
       },
       hourly: {
         table: "hourly_scores",
         label: "Hourly",
         dateLabel: "Date & Hour",
         hasHour: true,
-        select:
-          "id, user_id, city_id, date, hour, forecast_high, forecast_low, actual_high, actual_low, error_high, error_low, coins, mood"
+        select: "*"
       }
     };
 
@@ -525,8 +524,41 @@
     }
 
     function toNumber(v) {
+      if (v === null || v === undefined || v === "") return null;
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
+    }
+
+    function getFirstNumber(row, keys) {
+      for (const key of keys) {
+        const n = toNumber(row[key]);
+        if (n !== null) return n;
+      }
+      return null;
+    }
+
+    function getForecastHigh(row) {
+      return getFirstNumber(row, ["forecast_high", "forecast"]);
+    }
+
+    function getForecastLow(row) {
+      return getFirstNumber(row, ["forecast_low"]);
+    }
+
+    function getActualHigh(row) {
+      return getFirstNumber(row, ["actual_high", "actual"]);
+    }
+
+    function getActualLow(row) {
+      return getFirstNumber(row, ["actual_low"]);
+    }
+
+    function getErrorPrimary(row) {
+      return getFirstNumber(row, ["error_high", "error", "error_value"]);
+    }
+
+    function getErrorLow(row) {
+      return getFirstNumber(row, ["error_low"]);
     }
 
     function fmtInt(v, fallback = "—") {
@@ -538,7 +570,7 @@
       const n = toNumber(v);
       if (n === null) return fallback;
       const rounded = Math.round(n);
-      return `${rounded > 0 ? "+" : ""}${rounded}\u00b0`;
+      return `${rounded > 0 ? "+" : ""}${rounded}°`;
     }
 
     function parseDateValue(raw) {
@@ -607,13 +639,20 @@
       });
     }
 
-    function formatRange(high, low) {
-      const h = toNumber(high);
-      const l = toNumber(low);
-      if (h === null && l === null) return "—";
-      if (h === null) return `Low ${fmtInt(l)}°`;
-      if (l === null) return `High ${fmtInt(h)}°`;
-      return `High ${fmtInt(h)}° / Low ${fmtInt(l)}°`;
+    function formatRange(row, isForecast = true) {
+      const high = isForecast ? getForecastHigh(row) : getActualHigh(row);
+      const low = isForecast ? getForecastLow(row) : getActualLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (high === null && low === null) return "—";
+
+      // Hourly mode usually has a single value
+      if (isHourly || low === null) return `${fmtInt(high)}°`;
+
+      if (high === null) return `Low ${fmtInt(low)}°`;
+      if (low === null) return `High ${fmtInt(high)}°`;
+
+      return `High ${fmtInt(high)}° / Low ${fmtInt(low)}°`;
     }
 
     function accuracyColor(value) {
@@ -633,6 +672,16 @@
       return 3;
     }
 
+    function formatAccuracy(row) {
+      const primary = getErrorPrimary(row);
+      const secondary = getErrorLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (primary === null && secondary === null) return "—";
+      if (isHourly || secondary === null) return fmtSigned(primary);
+      return `${fmtSigned(primary)} / ${fmtSigned(secondary)}`;
+    }
+
     function dateSortValue(row) {
       const base = parseDateValue(row.date);
       if (base === 0) return 0;
@@ -647,12 +696,6 @@
       return d.getTime();
     }
 
-    function avgValue(...values) {
-      const nums = values.map(toNumber).filter((n) => n !== null);
-      if (!nums.length) return null;
-      return nums.reduce((s, n) => s + n, 0) / nums.length;
-    }
-
     function sortRows(list) {
       const dir = state.sortBy && state.sortDir === "asc" ? 1 : -1;
       const key = state.sortBy;
@@ -663,7 +706,7 @@
         if (key === "date") {
           aV = dateSortValue(a);
           bV = dateSortValue(b);
-          if (aV === bV) return a.id > b.id ? dir : a.id < b.id ? -dir : 0;
+          if (aV === bV) return String(a.id).localeCompare(String(b.id)) * dir;
           return (aV > bV ? 1 : -1) * dir;
         }
 
@@ -675,28 +718,28 @@
         }
 
         if (key === "forecast") {
-          aV = avgValue(a.forecast_high, a.forecast_low);
-          bV = avgValue(b.forecast_high, b.forecast_low);
-          if (aV === null && bV === null) return 0;
-          if (aV === null) return 1;
-          if (bV === null) return -1;
-          if (aV === bV) return 0;
-          return (aV > bV ? 1 : -1) * dir;
+          const aForecast = getForecastValueForSort(a);
+          const bForecast = getForecastValueForSort(b);
+          if (aForecast === null && bForecast === null) return 0;
+          if (aForecast === null) return 1;
+          if (bForecast === null) return -1;
+          if (aForecast === bForecast) return 0;
+          return (aForecast > bForecast ? 1 : -1) * dir;
         }
 
         if (key === "actual") {
-          aV = avgValue(a.actual_high, a.actual_low);
-          bV = avgValue(b.actual_high, b.actual_low);
-          if (aV === null && bV === null) return 0;
-          if (aV === null) return 1;
-          if (bV === null) return -1;
-          if (aV === bV) return 0;
-          return (aV > bV ? 1 : -1) * dir;
+          const aActual = getActualValueForSort(a);
+          const bActual = getActualValueForSort(b);
+          if (aActual === null && bActual === null) return 0;
+          if (aActual === null) return 1;
+          if (bActual === null) return -1;
+          if (aActual === bActual) return 0;
+          return (aActual > bActual ? 1 : -1) * dir;
         }
 
         if (key === "accuracy") {
-          aV = toNumber(a.error_high);
-          bV = toNumber(b.error_high);
+          aV = getErrorPrimary(a);
+          bV = getErrorPrimary(b);
           if (aV === null && bV === null) return 0;
           if (aV === null) return 1;
           if (bV === null) return -1;
@@ -705,8 +748,8 @@
         }
 
         if (key === "color") {
-          aV = accuracyRank(a.error_high);
-          bV = accuracyRank(b.error_high);
+          aV = accuracyRank(getErrorPrimary(a));
+          bV = accuracyRank(getErrorPrimary(b));
           if (aV === bV) return 0;
           return (aV > bV ? 1 : -1) * dir;
         }
@@ -730,6 +773,29 @@
 
         return 0;
       });
+    }
+
+    function getForecastValueForSort(row) {
+      const high = getForecastHigh(row);
+      const low = getForecastLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (isHourly) return high;
+
+      if (high === null && low === null) return null;
+      if (low === null) return high;
+      return (high + low) / 2;
+    }
+
+    function getActualValueForSort(row) {
+      const high = getActualHigh(row);
+      const low = getActualLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (isHourly) return high;
+      if (high === null && low === null) return null;
+      if (low === null) return high;
+      return (high + low) / 2;
     }
 
     function buildCityOptions() {
@@ -779,21 +845,18 @@
 
       if (query) {
         filtered = filtered.filter((row) => {
-          const hay = [
+          const rowText = [
             formatDisplayDate(row),
             row.city_name || "",
-            row.forecast_high,
-            row.forecast_low,
-            row.actual_high,
-            row.actual_low,
-            row.error_high,
-            row.error_low,
+            formatRange(row, true),
+            formatRange(row, false),
+            formatAccuracy(row),
             row.mood || "",
             row.hour || "",
-            row.coins
+            toNumber(row.coins)
           ].join(" ").toLowerCase();
 
-          return hay.includes(query);
+          return rowText.includes(query);
         });
       }
 
@@ -851,24 +914,23 @@
         tdCity.textContent = row.city_name || "Unknown";
 
         const tdForecast = document.createElement("td");
-        tdForecast.textContent = formatRange(row.forecast_high, row.forecast_low);
+        tdForecast.textContent = formatRange(row, true);
 
         const tdActual = document.createElement("td");
-        tdActual.textContent = formatRange(row.actual_high, row.actual_low);
+        tdActual.textContent = formatRange(row, false);
 
         const tdAccuracy = document.createElement("td");
         tdAccuracy.className = "accuracy-cell";
-        tdAccuracy.textContent = `${fmtSigned(row.error_high)} / ${fmtSigned(row.error_low)}`;
+        tdAccuracy.textContent = formatAccuracy(row);
 
         const tdColor = document.createElement("td");
         tdColor.className = "accuracy-cell";
         const dot = document.createElement("span");
-        dot.className = `accuracy-dot ${accuracyColor(row.error_high)}`;
-        const colorLabel = accuracyColor(row.error_high);
+        const err = getErrorPrimary(row);
+        const color = accuracyColor(err);
+        dot.className = `accuracy-dot ${color}`;
+        dot.title = err === null ? "No error data" : `Error: ${fmtSigned(err)}`;
         tdColor.appendChild(dot);
-        tdColor.appendChild(document.createTextNode(
-          colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1)
-        ));
 
         const tdCoins = document.createElement("td");
         tdCoins.textContent = fmtInt(row.coins);
@@ -942,7 +1004,7 @@
         return;
       }
 
-      const cityRows = cityResult.data || [];
+      const cityRows = cityResult.error ? [] : (cityResult.data || []);
       const cityMap = new Map();
       cityRows.forEach((c) => {
         cityMap.set(String(c.id), c.name || "Unknown");
@@ -971,7 +1033,6 @@
       loadData();
     }
 
-    // Event bindings
     tableHeaders.forEach((th) => {
       th.addEventListener("click", () => {
         const key = th.dataset.sort;
