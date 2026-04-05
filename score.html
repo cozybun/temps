@@ -722,9 +722,7 @@
       if (dateEl) {
         if (isHourly) {
           const w = getHourlyWindow();
-          const label = w.startDate === w.endDate
-            ? `${dateLabelFromYMD(w.startDate)} ${w.startHour}:00–${w.endHour}:00 ET`
-            : `${dateLabelFromYMD(w.startDate)} 13:00 ET → ${dateLabelFromYMD(w.endDate)} ${w.endHour}:00 ET`;
+          const label = w.startDate;
           dateEl.textContent = label;
         } else {
           dateEl.textContent = ydayLabel;
@@ -940,7 +938,6 @@
         if (value === null || value === undefined) return null;
         const s = String(value).trim();
     
-        // 13, 13:00
         let m = s.match(/^(\d{1,2})(?:[:.]\d{1,2})?$/);
         if (m) return Number(m[1]);
     
@@ -1014,21 +1011,7 @@
         return 0;
       });
     
-      // Top date header (single date, not range)
-      const firstDate = parseDateValue(sorted[0]) || "";
-      if (firstDate) {
-        const dayLabel = formatDateShort(firstDate);
-        if (dayLabel) {
-          const title = document.createElement("div");
-          title.className = "hourly-day-title";
-          title.textContent = dayLabel;
-          title.style.fontWeight = "600";
-          title.style.margin = "0 0 10px 0";
-          container.appendChild(title);
-        }
-      }
-    
-      // Group rows by day + hour so hour appears once per hour block
+      // group rows by day & hour so hour appears once per hour block
       const groups = new Map(); // key = `${day}|${hour}`
       sorted.forEach((row) => {
         const day = parseDateValue(row) || "unknown";
