@@ -1080,9 +1080,9 @@
       const dateTimeMs = (row) => {
         const ymd = parseDateValue(row);
         const h = parseHour(row.hour);
-        if (!ymd || h === null) return Number.POSITIVE_INFINITY;
+        if (!ymd || h === null) return Number.NEGATIVE_INFINITY;
         const d = new Date(`${ymd}T${String(h).padStart(2, "0")}:00:00`);
-        return Number.isNaN(d.getTime()) ? Number.POSITIVE_INFINITY : d.getTime();
+        return Number.isNaN(d.getTime()) ? Number.NEGATIVE_INFINITY : d.getTime();
       };
     
       const sorted = [...items].sort((a, b) => {
