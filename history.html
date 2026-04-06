@@ -344,21 +344,43 @@
       display: table-cell;
     }
 
+    .source-wrap {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      padding-left: 2px;
+      padding-right: 2px;
+    }
+
     .source-line {
-      margin-top: 0.5rem;
-      font-size: 0.75rem;
-      color: #1d4ed8;
-      line-height: 1.4;
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.45;
       text-align: left;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    
+
+    .source-line .source-label {
+      color: #334155;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-right: 0.35rem;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+    }
+
     .source-line a {
-      color: #1d4ed8;
-      text-decoration: underline;
+      color: #3b82f6;
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(59, 130, 246, 0.45);
+      padding-bottom: 1px;
     }
-    
+
     .source-line a:hover {
       color: #1e40af;
+      border-bottom-color: rgba(30, 64, 175, 0.75);
     }
 
     @media (max-width: 960px) {
@@ -462,8 +484,11 @@
             </thead>
             <tbody id="historyBody"></tbody>
           </table>
-          <div id="historySourceLine" class="source-line">Sources:</div>
         </div>
+      </div>
+
+      <div class="source-wrap">
+        <div id="historySourceLine" class="source-line">Sources:</div>
       </div>
 
       <div class="pager">
@@ -549,6 +574,19 @@
       pageSize: 50
     };
 
+    const SOURCES_BY_MODE = {
+      daily: [
+        { name: "Los Angeles", url: "https://forecast.weather.gov/product.php?site=LOX&product=CLI&issuedby=LAX" },
+        { name: "Dallas", url: "https://forecast.weather.gov/product.php?site=NWS&product=CLI&issuedby=DFW" },
+        { name: "New York City", url: "https://forecast.weather.gov/product.php?site=NWS&issuedby=NYC&product=CLI" }
+      ],
+      hourly: [
+        { name: "Los Angeles", url: "https://weather.gov/wrh/timeseries?site=KLAX&hourly=true" },
+        { name: "Dallas", url: "https://weather.gov/wrh/timeseries?site=KDFW&hourly=true" },
+        { name: "New York City", url: "https://weather.gov/wrh/timeseries?site=KNYC" }
+      ]
+    };
+
     function modeConfigFor(mode) {
       return modeConfig[mode] || modeConfig.daily;
     }
@@ -578,13 +616,10 @@
 
     function toNumber(v) {
       if (v === null || v === undefined || v === "") return null;
-    
       if (typeof v === "number") return Number.isFinite(v) ? v : null;
-    
       const s = String(v).trim();
       const match = s.match(/[-+]?\d+(?:[.,]\d+)?/); // tolerant numeric extraction
       if (!match) return null;
-    
       const n = Number(match[0].replace(",", "."));
       return Number.isFinite(n) ? n : null;
     }
@@ -614,10 +649,7 @@
     }
 
     function getErrorPrimary(row, isHourly = false) {
-      const keys = isHourly
-        ? ["error"]  // hourly error
-        : ["error_high"]; // daily high error
-    
+      const keys = isHourly ? ["error"] : ["error_high"]; // hourly uses error, daily uses error_high
       for (const key of keys) {
         const n = toNumber(row?.[key]);
         if (n !== null) return n;
@@ -764,6 +796,29 @@
       return d.getTime();
     }
 
+    function getForecastValueForSort(row) {
+      const high = getForecastHigh(row);
+      const low = getForecastLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (isHourly) return high;
+
+      if (high === null && low === null) return null;
+      if (low === null) return high;
+      return (high + low) / 2;
+    }
+
+    function getActualValueForSort(row) {
+      const high = getActualHigh(row);
+      const low = getActualLow(row);
+      const isHourly = modeConfigFor(state.mode).hasHour;
+
+      if (isHourly) return high;
+      if (high === null && low === null) return null;
+      if (low === null) return high;
+      return (high + low) / 2;
+    }
+
     function sortRows(list) {
       const dir = state.sortBy && state.sortDir === "asc" ? 1 : -1;
       const key = state.sortBy;
@@ -816,7 +871,7 @@
         }
 
         if (key === "color") {
-          aV = accuracyRank(getErrorPrimary(a)); // color is based on error_high only
+          aV = accuracyRank(getErrorPrimary(a)); // color is based on error_high
           bV = accuracyRank(getErrorPrimary(b));
           if (aV === bV) return 0;
           return (aV > bV ? 1 : -1) * dir;
@@ -841,29 +896,6 @@
 
         return 0;
       });
-    }
-
-    function getForecastValueForSort(row) {
-      const high = getForecastHigh(row);
-      const low = getForecastLow(row);
-      const isHourly = modeConfigFor(state.mode).hasHour;
-
-      if (isHourly) return high;
-
-      if (high === null && low === null) return null;
-      if (low === null) return high;
-      return (high + low) / 2;
-    }
-
-    function getActualValueForSort(row) {
-      const high = getActualHigh(row);
-      const low = getActualLow(row);
-      const isHourly = modeConfigFor(state.mode).hasHour;
-
-      if (isHourly) return high;
-      if (high === null && low === null) return null;
-      if (low === null) return high;
-      return (high + low) / 2;
     }
 
     function buildCityOptions() {
@@ -1040,26 +1072,17 @@
       });
     }
 
-    const sources = [
-      { name: "Los Angeles", url: "https://weather.gov/wrh/timeseries?site=KLAX&hourly=true" },
-      { name: "Dallas", url: "https://weather.gov/wrh/timeseries?site=KDFW&hourly=true" },
-      { name: "New York City", url: "https://weather.gov/wrh/timeseries?site=KNYC" }
-    ];
-    
-    function renderSourceLine() {
+    function renderSourceLine(mode = state.mode) {
       const box = document.getElementById("historySourceLine");
       if (!box) return;
-    
-      const links = sources.map(s =>
+
+      const list = SOURCES_BY_MODE[mode] || [];
+      const links = list.map(s =>
         `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a>`
       );
-    
-      box.innerHTML = `Sources: ${links.join(", ") || "—"}`;
+      const label = mode === "hourly" ? "Hourly Sources:" : "Daily Sources:";
+      box.innerHTML = `<span class="source-label">${label}</span> ${links.join(", ") || "—"}`;
     }
-    
-    document.addEventListener("DOMContentLoaded", () => {
-      renderSourceLine();
-    });
 
     function updatePager() {
       const total = state.filteredRows.length;
@@ -1098,6 +1121,7 @@
       }
 
       setStatus("Loading forecast history...", "loading");
+      renderSourceLine(state.mode);
 
       const cfg = modeConfigFor(state.mode);
       state.page = 1;
@@ -1149,6 +1173,7 @@
       applyModeColumns();
       setModeStyles();
       updateDateHeaderLabel();
+      renderSourceLine(mode);
       loadData();
     }
 
@@ -1195,6 +1220,7 @@
     });
 
     refreshBtn.addEventListener("click", () => {
+      renderSourceLine(state.mode);
       loadData();
     });
 
@@ -1223,6 +1249,7 @@
     applyModeColumns();
     setModeStyles();
     updateDateHeaderLabel();
+    renderSourceLine(state.mode);
     loadData();
   </script>
 </body>
