@@ -344,6 +344,23 @@
       display: table-cell;
     }
 
+    .source-line {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #1d4ed8;
+      line-height: 1.4;
+      text-align: left;
+    }
+    
+    .source-line a {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+    
+    .source-line a:hover {
+      color: #1e40af;
+    }
+
     @media (max-width: 960px) {
       .controls {
         grid-template-columns: repeat(2, minmax(150px, 1fr));
@@ -445,6 +462,7 @@
             </thead>
             <tbody id="historyBody"></tbody>
           </table>
+          <div id="historySourceLine" class="source-line">Sources:</div>
         </div>
       </div>
 
@@ -1021,6 +1039,27 @@
         tbody.appendChild(tr);
       });
     }
+
+    const sources = [
+      { name: "Los Angeles", url: "https://weather.gov/wrh/timeseries?site=KLAX&hourly=true" },
+      { name: "Dallas", url: "https://weather.gov/wrh/timeseries?site=KDFW&hourly=true" },
+      { name: "New York City", url: "https://weather.gov/wrh/timeseries?site=KNYC" }
+    ];
+    
+    function renderSourceLine() {
+      const box = document.getElementById("historySourceLine");
+      if (!box) return;
+    
+      const links = sources.map(s =>
+        `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a>`
+      );
+    
+      box.innerHTML = `Sources: ${links.join(", ") || "—"}`;
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      renderSourceLine();
+    });
 
     function updatePager() {
       const total = state.filteredRows.length;
