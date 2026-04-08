@@ -246,6 +246,12 @@ async function loadDailyData() {
   return { actuals: actuals || [], guesses: guesses || [], hourlyGuesses: hourlyGuesses || [] };
 }
 
+function getStationDisplay(city) {
+  const raw = String(city?.station || '').trim().toUpperCase();
+  if (!raw) return '';
+  return raw.startsWith("K") ? raw : `K${raw}`;
+}
+
 // Build grid
 
 async function buildDailyGrid() {
@@ -262,10 +268,8 @@ async function buildDailyGrid() {
 
   cities.forEach(city => {
 
-    const station = (city.station || '').toString().trim().toUpperCase();
-    const stationDisplay = station
-      ? (station.startsWith("K") ? station : `K${station}`)
-      : "";
+    console.log('city.station:', city.name, city.station);
+    const stationDisplay = getStationDisplay(city);
 
     const cityToday = getCityLocalDateISO(city.timezone, 0);
     const cityTomorrow = getCityLocalDateISO(city.timezone, 1);
