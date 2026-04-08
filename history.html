@@ -578,7 +578,7 @@
       daily: [
         { name: "Los Angeles", url: "https://forecast.weather.gov/product.php?site=LOX&product=CLI&issuedby=LAX" },
         { name: "Dallas", url: "https://forecast.weather.gov/product.php?site=NWS&product=CLI&issuedby=DFW" },
-        { name: "New York City", url: "https://forecast.weather.gov/product.php?site=NWS&issuedby=NYC&product=CLI" }
+        { name: "New York City", url: "https://forecast.weather.gov/product.php?site=NWS&product=CLI&issuedby=NYC" }
       ],
       hourly: [
         { name: "Los Angeles", url: "https://weather.gov/wrh/timeseries?site=KLAX&hourly=true" },
@@ -618,7 +618,7 @@
       if (v === null || v === undefined || v === "") return null;
       if (typeof v === "number") return Number.isFinite(v) ? v : null;
       const s = String(v).trim();
-      const match = s.match(/[-+]?\d+(?:[.,]\d+)?/); // tolerant numeric extraction
+      const match = s.match(/[-+]?\d+(?:[.,]\d+)?/);
       if (!match) return null;
       const n = Number(match[0].replace(",", "."));
       return Number.isFinite(n) ? n : null;
@@ -649,7 +649,7 @@
     }
 
     function getErrorPrimary(row, isHourly = false) {
-      const keys = isHourly ? ["error"] : ["error_high"]; // hourly uses error, daily uses error_high
+      const keys = isHourly ? ["error"] : ["error_high"];
       for (const key of keys) {
         const n = toNumber(row?.[key]);
         if (n !== null) return n;
@@ -678,66 +678,97 @@
       return Number.isNaN(ts) ? 0 : ts;
     }
 
-    function parseHourValue(raw) {
-      if (raw === null || raw === undefined || raw === "") return null;
-      if (typeof raw === "number" && Number.isFinite(raw)) {
-        const h = Math.trunc(raw);
-        return h >= 0 && h <= 23 ? h : null;
-      }
+    function makeHourInfo(hour, isSixHourHigh = false, sortMinuteOffset = 0) {
+      if (typeof hour !== "number" || !Number.isFinite(hour)) return null;
+      const normalizedHour = Math.trunc(hour);
+      if (normalizedHour < 0 || normalizedHour > 23) return null;
+      return {
+        hour: normalizedHour,
+        isSixHourHigh,
+        sortMinuteOffset
+      };
+    }
 
+    function parseHourInfo(raw) {
+      if (raw === null || raw === undefined) return null;
       const s = String(raw).trim();
-      const m = s.match(/^(\d{1,2})(?::\d{1,2})?\s*(am|pm)?$/i);
+      if (!s) return null;
+
+      const eps = 1e-9;
+
+      // Handles 20.5, 14.5, 20, 14 etc.
+      const asNumber = Number(s);
+      if (Number.isFinite(asNumber)) {
+        const h = Math.trunc(asNumber);
+        const frac = asNumber - h;
+        const isSixHourHigh = Math.abs(frac - 0.5) < eps;
+        return makeHourInfo(h, isSixHourHigh, isSixHourHigh ? 30 : 0);
+      }
+
+      // Handles formats like "8 pm", "8:00 PM", "2:30pm", "14:30"
+      const m = s.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/i);
       if (m) {
-        let h = Number(m[1]);
-        const ap = (m[2] || "").toLowerCase();
-        if (ap === "pm" && h < 12) h += 12;
-        if (ap === "am" && h === 12) h = 0;
-        return h >= 0 && h <= 23 ? h : null;
+        const baseHourRaw = Number(m[1]);
+        const minuteRaw = Number(m[2] || 0);
+        if (!Number.isFinite(baseHourRaw) || baseHourRaw < 0 || baseHourRaw > 23) return null;
+        if (!Number.isFinite(minuteRaw) || minuteRaw < 0 || minuteRaw > 59) return null;
+
+        const ampm = (m[3] || "").toLowerCase();
+        let h = baseHourRaw;
+        if (ampm === "pm" && h < 12) h += 12;
+        if (ampm === "am" && h === 12) h = 0;
+
+        const isSixHourHigh = minuteRaw === 30;
+        return makeHourInfo(h, isSixHourHigh, isSixHourHigh ? 30 : 0);
       }
 
-      const k = s.match(/^(\d{1,2})$/);
-      if (k) {
-        const h = Number(k[1]);
-        return h >= 0 && h <= 23 ? h : null;
-      }
-
+      // Fallback: parse anything date-like and take extracted hour
       const ts = Date.parse(s);
       if (Number.isNaN(ts)) return null;
-      return new Date(ts).getHours();
+      const dt = new Date(ts);
+      const mns = dt.getMinutes();
+      const isSixHourHigh = mns === 30;
+      return makeHourInfo(dt.getHours(), isSixHourHigh, isSixHourHigh ? 30 : 0);
+    }
+
+    function parseHourValue(raw) {
+      const info = parseHourInfo(raw);
+      return info ? info.hour : null;
+    }
+
+    function formatHourLabel(hour24) {
+      const h = hour24 % 12 || 12;
+      const ap = hour24 >= 12 ? "PM ET" : "AM ET";
+      return `${h} ${ap}`;
     }
 
     function formatDisplayDate(row) {
       const hasHour = modeConfigFor(state.mode).hasHour;
       if (!row.date) return "—";
-
+    
       const base = parseDateValue(row.date);
       if (base === 0) return String(row.date);
-
+    
       const d = new Date(base);
-
-      if (!hasHour) return d.toLocaleDateString(undefined, {
+      const dateText = d.toLocaleDateString(undefined, {
         year: "numeric",
         month: "short",
         day: "numeric"
       });
-
-      const hour = parseHourValue(row.hour);
-      if (hour === null) return d.toLocaleString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      });
-
-      d.setHours(hour, 0, 0, 0);
-      return d.toLocaleString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      });
+    
+      if (!hasHour) return dateText;
+    
+      const hourInfo = parseHourInfo(row.hour);
+      if (!hourInfo) {
+        const fallbackHour = d.getHours();
+        const fallbackMinute = d.getMinutes();
+        const isHalf = fallbackMinute === 30;
+        const timeText = formatHourLabel(fallbackHour);
+        return `${dateText}, ${timeText}${isHalf ? " 6-hr high" : ""}`;
+      }
+    
+      const timeText = formatHourLabel(hourInfo.hour);
+      return `${dateText}, ${timeText}${hourInfo.isSixHourHigh ? " 6-hr high" : ""}`;
     }
 
     function formatRange(row, isForecast = true) {
@@ -788,11 +819,11 @@
       const cfg = modeConfigFor(state.mode);
       if (!cfg.hasHour) return base;
 
-      const hour = parseHourValue(row.hour);
-      if (hour === null) return base;
+      const hourInfo = parseHourInfo(row.hour);
+      if (!hourInfo) return base;
 
       const d = new Date(base);
-      d.setHours(hour, 0, 0, 0);
+      d.setHours(hourInfo.hour, hourInfo.sortMinuteOffset, 0, 0);
       return d.getTime();
     }
 
@@ -871,7 +902,7 @@
         }
 
         if (key === "color") {
-          aV = accuracyRank(getErrorPrimary(a)); // color is based on error_high
+          aV = accuracyRank(getErrorPrimary(a));
           bV = accuracyRank(getErrorPrimary(b));
           if (aV === bV) return 0;
           return (aV > bV ? 1 : -1) * dir;
@@ -1051,9 +1082,9 @@
         if (state.mode === "daily") {
           const tdColor = document.createElement("td");
           tdColor.className = "color-cell color-col";
-          const dot = document.createElement("span");
-          const err = getErrorPrimary(row); // only error_high
+          const err = getErrorPrimary(row);
           const color = accuracyColor(err);
+          const dot = document.createElement("span");
           dot.className = `accuracy-dot ${color}`;
           dot.title = err === null ? "No error data" : `Error: ${fmtSigned(err)}`;
           tdColor.appendChild(dot);
@@ -1181,7 +1212,6 @@
       th.addEventListener("click", () => {
         const key = th.dataset.sort;
 
-        // Hide hourly-only columns from interactions in hourly mode
         if (state.mode === "hourly" && (key === "color" || key === "mood")) return;
 
         if (state.sortBy === key) {
@@ -1245,7 +1275,7 @@
       window.location.href = "stats.html";
     });
 
-    state.pageSize = parseInt(pageSizeInput.value, 10) || 50; // initialize
+    state.pageSize = parseInt(pageSizeInput.value, 10) || 50;
     applyModeColumns();
     setModeStyles();
     updateDateHeaderLabel();
