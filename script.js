@@ -325,7 +325,7 @@ async function buildDailyGrid() {
 
     card.innerHTML = `
       <div class="city-card-header">
-        ${city.name}${stationDisplay ? ` <small style="font-size: 0.8em; opacity: 0.8;">(${stationDisplay})</small>` : ''}
+        ${city.name}${stationDisplay ? ` <small style="font-size: 0.5em; opacity: 1;">(${stationDisplay})</small>` : ''}
       </div>
       <div class="city-card-content">
         ${showYesterday
