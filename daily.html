@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🐰 Temps With Friends 🔮</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
   <div style="text-align:center; margin:1rem 0;">
     <a href="hourly.html">
       <button style="padding:0.8rem 1.4rem; background:#9b59b6; color:#fff; border:none; border-radius:8px; cursor:pointer;">
@@ -17,35 +16,38 @@
     </a>
   </div>
 
-  <div id="dailyPageHeader" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap; margin:1rem 0;">
-    <h1 style="margin:0;"> My Daily Forecasts </h1>
+  <input id="forecastType" type="hidden" value="daily" />
+
+  <div id="dailyPageHeader" class="daily-page-header">
+    <h1> My Daily Forecasts </h1>
     <button id="helpBtn" type="button" class="help-trigger"> How To </button>
   </div>
-  
-  <!-- Help modal -->
+
   <div id="dailyHelpModal" class="help-modal hidden" aria-modal="true" role="dialog" aria-labelledby="helpModalTitle">
     <div id="helpModalBackdrop" class="help-modal-backdrop"></div>
+
     <div class="help-modal-dialog">
       <div class="help-modal-header">
-        <h2 id="helpModalTitle"> How to Play </h2>
+        <h2 id="helpModalTitle"> How To </h2>
         <button id="helpCloseBtn" type="button" class="help-close" aria-label="Close help">×</button>
       </div>
-      <p><strong> Quick Guide: </strong></p>
+
+      <p><strong>Quick Guide:</strong></p>
       <ul>
-        <li>Choose <strong>Today</strong> or <strong>Tomorrow</strong> from the forecast day selector</li>
-        <li>Enter your forecast for today's or tomorrow's <strong>High</strong> and <strong>Low</strong></li>
-        <li>Click Save to save your forecasts. Forecast inputs are locked after cutoff (noon local)</li>
-        <li>Your prior forecasts (if any) appear as "Your current forecast"</li>
-        <li>Click View My Score the next morning to see how accurate your forecasts were. Good luck!</li>
+        <li>Choose <strong>Today</strong> or <strong>Tomorrow</strong> from the forecast day selector.</li>
+        <li>Enter your forecast for today’s or tomorrow’s <strong>High</strong> and <strong>Low</strong>.</li>
+        <li>Click <strong>Save</strong> to save your forecasts. Inputs lock after noon local time.</li>
+        <li>Your prior forecasts (if any) appear as <strong>Your current forecast</strong>.</li>
+        <li>Click <strong>View My Score</strong> the next morning to see your results. Good luck!</li>
       </ul>
+
       <div style="text-align:right; margin-top: 0.9rem;">
-        <button id="helpDoneBtn" type="button">Got it</button>
+        <button id="helpDoneBtn" type="button"> Understood ✅ </button>
       </div>
     </div>
   </div>
 
   <form id="tempsForm">
-
     <div style="text-align:center; margin:1rem 0;">
       <label>
         Forecast for:
@@ -54,29 +56,31 @@
           <option value="tomorrow">Tomorrow</option>
         </select>
       </label>
+
       <div id="currentDateWrapper" style="margin-top:6px;">
         <span id="currentDate"></span>
         <span class="pt-info">
           ⓘ
-          <span class="pt-tooltip">Dates shown in Pacific Time (PT)</span>
+          <span class="pt-tooltip"> Dates shown in Pacific Time (PT) </span>
         </span>
       </div>
     </div>
 
-    <p style="text-align:center; margin:1rem 0;">Cutoff = noon local time | Yesterday's actuals shown for reference</p>
-    
+    <p style="text-align:center; margin:1rem 0;">
+      Cutoff = noon local time | Yesterday's actuals shown for reference
+    </p>
+
     <div id="dailyGrid" class="city-grid">
-      <!-- JS will fill with city cards -->
+      <!-- JS fills city cards -->
     </div>
-  
+
     <div style="text-align:center; margin: 2rem 0;">
-      <button type="submit" id="submitDailyBtn">Save My Daily Forecasts 🐰</button>
+      <button type="submit" id="submitDailyBtn"> Save My Daily Forecasts 💾 </button>
     </div>
   </form>
-  
+
   <div id="status" style="text-align:center; margin-top:1rem; min-height:1.5rem;"></div>
 
-  <!-- Reveal Button -->
   <div style="text-align:center; margin:2rem 0;">
     <button id="revealBtn"> 🐰 View My Score </button>
   </div>
@@ -84,6 +88,5 @@
   <div id="revealResults"></div>
 
   <script src="script.js"></script>
-
 </body>
 </html>
