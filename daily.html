@@ -16,9 +16,33 @@
       </button>
     </a>
   </div>
+
+  <div id="dailyPageHeader" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap; margin:1rem 0;">
+    <h1 style="margin:0;"> My Daily Forecasts </h1>
+    <button id="helpBtn" type="button" class="help-trigger"> How To </button>
+  </div>
   
-  <input id="forecastType" type="hidden" value="daily">
-  <h1>My Daily Forecasts</h1>
+  <!-- Help modal -->
+  <div id="dailyHelpModal" class="help-modal hidden" aria-modal="true" role="dialog" aria-labelledby="helpModalTitle">
+    <div id="helpModalBackdrop" class="help-modal-backdrop"></div>
+    <div class="help-modal-dialog">
+      <div class="help-modal-header">
+        <h2 id="helpModalTitle"> How to Play </h2>
+        <button id="helpCloseBtn" type="button" class="help-close" aria-label="Close help">×</button>
+      </div>
+      <p><strong> Quick Guide: </strong></p>
+      <ul>
+        <li>Choose <strong>Today</strong> or <strong>Tomorrow</strong> from the forecast day selector</li>
+        <li>Enter your forecast for today's or tomorrow's <strong>High</strong> and <strong>Low</strong></li>
+        <li>Click Save to save your forecasts. Forecast inputs are locked after cutoff (noon local)</li>
+        <li>Your prior forecasts (if any) appear as "Your current forecast"</li>
+        <li>Click View My Score the next morning to see how accurate your forecasts were. Good luck!</li>
+      </ul>
+      <div style="text-align:right; margin-top: 0.9rem;">
+        <button id="helpDoneBtn" type="button">Got it</button>
+      </div>
+    </div>
+  </div>
 
   <form id="tempsForm">
 
