@@ -262,7 +262,10 @@ async function buildDailyGrid() {
 
   cities.forEach(city => {
 
-    const stationCode = [city.station].find(v => typeof v === 'string' && v.trim());
+    const station = (city.station || '').toString().trim().toUpperCase();
+    const stationDisplay = station
+      ? (station.startsWith("K") ? station : `K${station}`)
+      : "";
 
     const cityToday = getCityLocalDateISO(city.timezone, 0);
     const cityTomorrow = getCityLocalDateISO(city.timezone, 1);
@@ -318,7 +321,7 @@ async function buildDailyGrid() {
 
     card.innerHTML = `
       <div class="city-card-header">
-        ${city.name}${stationCode ? `<small style="font-size: 0.8em; opacity: 0.8;"> (K${stationCode})</small>` : ''}
+        ${city.name}${stationDisplay ? ` <small style="font-size: 0.8em; opacity: 0.8;">(${stationDisplay})</small>` : ''}
       </div>
       <div class="city-card-content">
         ${showYesterday
