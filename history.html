@@ -752,33 +752,31 @@
 
     function formatHourLabel(hour24) {
       const h = hour24 % 12 || 12;
-      const ap = hour24 >= 12 ? "PM ET" : "AM ET";
+      const ap = hour24 >= 12 ? "PM" : "AM";
       return `${h} ${ap}`;
     }
 
-    function formatDisplayDate(row, hasHour, parseHourInfo, stateMode, toDateTextFallback) {
-      if (!row.date) return "—";
+    function formatDisplayDate(
+      row,
+      hasHour = true,
+      hourParser = parseHourInfo
+    ) {
+      if (!row?.date) return "—";
     
       const t = parseDateValue(row.date);
-      if (!t) return String(row.date);
-    
-      const d = new Date(t);
+      if (!Number.isFinite(t)) return String(row.date);
     
       const dateText = new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
         month: "short",
         day: "numeric",
         year: "numeric",
-      }).format(d);
+      }).format(new Date(t));
     
-      if (!hasHour) {
-        return `${dateText} ET`;
-      }
+      if (!hasHour) return `${dateText} ET`;
     
-      const hourInfo = parseHourInfo(row.hour);
-      if (!hourInfo) {
-        return `${dateText} ET`;
-      }
+      const hourInfo = typeof hourParser === "function" ? hourParser(row.hour) : null;
+      if (!hourInfo) return `${dateText} ET`;
     
       return `${dateText}, ${formatHourLabel(hourInfo.hour)}${
         hourInfo.isSixHourHigh ? " 6-hr high" : ""
