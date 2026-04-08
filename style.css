@@ -140,6 +140,10 @@ button:disabled {
   margin-left: auto;
 }
 
+.city-card-header small {
+  white-space: nowrap;
+}
+
 .city-card.expanded .city-card-header::after {
   transform: rotate(180deg);
 }
