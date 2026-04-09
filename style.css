@@ -187,7 +187,13 @@ button:disabled {
   align-items: center;
   gap: 0.5rem;
   margin-left: 0.6rem;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+#forecastDay {
+  font-size: 1.3rem;
+  font-weight: 600;
 }
 
 /* TOOLTIP */
@@ -390,23 +396,4 @@ button:disabled {
   line-height: 1.1;
   padding: 0.24rem 0.68rem;
   font-size: 0.8rem;
-}
-
-#tempsForm > div:first-of-type {
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-
-#tempsForm > div:first-of-type label {
-  display: inline-block;
-  margin-bottom: 0.3rem;
-}
-
-#forecastDay {
-  font-size: 1.3rem;
-}
-
-#currentDate {
-  font-size: 1.3rem;
-  font-weight: 700;
 }
