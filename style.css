@@ -421,8 +421,8 @@ button:disabled {
 
 /* Space between Forecast date and hourly boxes */
 #hourSelector {
-  margin-top: 1.3rem !important;
-  margin-bottom: 1.3rem !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
 /* Space between hour boxes and cutoff text */
