@@ -98,6 +98,14 @@ button:disabled {
   font-weight: 700 !important;
 }
 
+#hourlySaveBtn:disabled {
+  background: ##FFFFFF !important;      
+  color: #bfdbfe !important;           
+  border: 2px solid #93c5fd !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+
 /* GRID */
 .city-grid {
   display: grid;
