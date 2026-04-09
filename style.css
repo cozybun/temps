@@ -391,3 +391,22 @@ button:disabled {
   padding: 0.24rem 0.68rem;
   font-size: 0.8rem;
 }
+
+#tempsForm > div:first-of-type {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+#tempsForm > div:first-of-type label {
+  display: inline-block;
+  margin-bottom: 0.3rem;
+}
+
+#forecastDay {
+  font-size: 1.3rem;
+}
+
+#currentDate {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
