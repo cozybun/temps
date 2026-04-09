@@ -222,7 +222,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.3rem;
   margin: 1rem 0;
   text-align: center;
 }
@@ -336,4 +336,57 @@ button:disabled {
   background: #38bdf8;
   border-color: #38bdf8;
   color: white;
+}
+
+.daily-page-header,
+#dailyPageHeader,
+.hourly-page-header,
+#hourlyPageHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;                 /* controls space between title and button */
+  margin: 0.6rem 0 0.85rem;     /* controls space after header */
+}
+
+.daily-page-header h1,
+#dailyPageHeader h1,
+.hourly-page-header h1,
+#hourlyPageHeader h1 {
+  margin: 0;
+}
+
+/* Daily form: reduce space above date selector */
+#tempsForm,
+.daily-form {
+  margin-top: 0.35rem !important;
+  margin-bottom: 1.2rem;
+}
+
+/* First row inside daily form currently has inline margin; override it */
+#tempsForm > div:first-of-type {
+  margin-top: 0.3rem !important;
+  margin-bottom: 0.65rem !important;
+  text-align: center;
+}
+
+/* Hourly spacing (if you use .hour-selector row there) */
+#hourlyForm,
+.hourly-form {
+  margin-top: 0.35rem !important;
+  margin-bottom: 1.2rem;
+}
+
+.hour-selector {
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.7rem !important;
+}
+
+/* Keep How To button slightly compact */
+.help-trigger {
+  margin: 0;
+  line-height: 1.1;
+  padding: 0.24rem 0.68rem;
+  font-size: 0.8rem;
 }
