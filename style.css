@@ -371,14 +371,15 @@ button:disabled {
   margin-bottom: 1.2rem;
 }
 
-/* First row inside daily form currently has inline margin; override it */
+/* First row inside daily form currently has inline margin, override it */
 #tempsForm > div:first-of-type {
   margin-top: 0.3rem !important;
   margin-bottom: 0.6rem !important;
   text-align: center;
+  font-weight: 600;
 }
 
-/* Hourly spacing (if you use .hour-selector row there) */
+/* Hourly spacing (if using .hour-selector row there) */
 #hourlyForm,
 .hourly-form {
   margin-top: 0.3rem !important;
