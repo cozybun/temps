@@ -64,9 +64,11 @@ button:active {
 }
 
 button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  opacity: 0.6;
+  background: ##FFFFFF !important;      
+  color: #bfdbfe !important;           
+  border: 2px solid #93c5fd !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
 }
 
 /* Reveal button same size, different color */
@@ -96,14 +98,6 @@ button:disabled {
   padding: 1rem 2.2rem !important;
   border-radius: 14px !important;
   font-weight: 700 !important;
-}
-
-#hourlySaveBtn:disabled {
-  background: ##FFFFFF !important;      
-  color: #bfdbfe !important;           
-  border: 2px solid #93c5fd !important;
-  opacity: 1 !important;
-  cursor: not-allowed !important;
 }
 
 /* GRID */
