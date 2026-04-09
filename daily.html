@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐰 Temps With Friends 🔮</title>
+  <title> 🐰 Temps With Friends 🔮 </title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div style="text-align:center; margin:1rem 0;">
     <a href="hourly.html">
-      <button style="padding:0.8rem 1.4rem; background:#9b59b6; color:#fff; border:none; border-radius:8px; cursor:pointer;">
+      <button style="padding:0.8rem 1.3rem; background:#9b59b6; color:#fff; border:none; border-radius:8px; cursor:pointer;">
         Go to Hourly Forecasts
       </button>
     </a>
@@ -34,10 +34,10 @@
 
       <ul>
         <li>Choose <strong>Today</strong> or <strong>Tomorrow</strong> from the forecast day selector.</li>
-        <li>Enter your forecast for today’s or tomorrow’s <strong>High</strong> and <strong>Low</strong> before the cutoff time.</li>
+        <li>Enter your forecasts for today's or tomorrow's <strong>High</strong> and <strong>Low</strong> before the cutoff time.</li>
         <li>Click <strong>Save</strong> to save your forecasts. You can edit forecasts until the cutoff time.</li>
-        <li>Your prior forecasts (if any) appear as <strong>My current forecast</strong>.</li>
-        <li>Click <strong>View My Score</strong> the next morning to see your results. Have fun!</li>
+        <li>Your latest prior forecasts (if any) appear as <strong>My current forecast</strong>.</li>
+        <li>Click <strong>View My Score</strong> the next morning to see your results and score. Have fun!</li>
       </ul>
 
       <div style="text-align:center; margin-top: 0.9rem;">
@@ -66,7 +66,7 @@
     </div>
 
     <p style="text-align:center; margin:1rem 0;">
-      Cutoff = noon local time | Yesterday's actuals shown for reference
+      Cutoff = noon local time | Yesterday's actual temps shown for reference
     </p>
 
     <div id="dailyGrid" class="city-grid">
