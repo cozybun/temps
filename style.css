@@ -413,18 +413,19 @@ button:disabled {
 
 #currentHourlyDate {
   font-size: 1.5rem !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   margin: 0.5rem auto 1rem !important;
   text-align: center;
 }
 
 /* Space between Forecast date and hourly boxes */
 #hourSelector {
-  margin-top: 1rem !important;
-  margin-bottom: 1.05rem !important;
+  margin-top: 1.3rem !important;
+  margin-bottom: 1.3rem !important;
 }
 
 /* Space between hour boxes and cutoff text */
 .hour-selector + p {
-  margin: 1rem auto 0.9rem !important;
-  text-align
+  margin: 1rem auto 1rem !important;
+  text-align: center;
+}
