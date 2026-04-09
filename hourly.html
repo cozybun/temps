@@ -7,16 +7,24 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    #hourlyScoreBtn {
+      background: #10b981;
+      color: #ffffff;
+      border: none;
+    }
+    #hourlyScoreBtn:hover {
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
+    }
+  </style>
 </head>
 <body>
 
   <div style="text-align:center; margin:1rem 0; display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
     <a href="daily.html">
-      <button type="button"> ← Go to Daily </button>
-    </a>
-
-    <a href="score.html?mode=hourly">
-      <button type="button"> 📊 View My Hourly Scores </button>
+      <button type="button"> ← Go to Daily Forecasts </button>
     </a>
   </div>
 
@@ -26,10 +34,6 @@
     Forecast date loading...
   </p>
 
-  <!-- Hour Selector -->
-  <div id="hourSelector" class="hour-selector"></div>
-
-  <!-- moved Cutoff text below hour selector -->
   <p style="text-align:center; margin:0.5rem auto 1rem; color:#000;">
     Cutoff = 30 mins before the hour
     <span class="pt-info">
@@ -37,6 +41,9 @@
       <span class="pt-tooltip"> Hours shown in Eastern Time (ET) </span>
     </span>
   </p>
+
+  <!-- Hour Selector -->
+  <div id="hourSelector" class="hour-selector"></div>
 
   <!-- Forecast Form -->
   <form id="hourlyForm">
@@ -51,6 +58,12 @@
 
   <!-- Status Messages -->
   <div id="status" style="text-align:center;margin-top:1rem;"></div>
+
+  <div style="text-align:center;margin:1.5rem 0 0.5rem;">
+    <a href="score.html?mode=hourly">
+      <button type="button" id="hourlyScoreBtn"> 📊 View My Hourly Scores </button>
+    </a>
+  </div>
 
   <script src="script.js"></script>
 </body>
