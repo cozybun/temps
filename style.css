@@ -91,6 +91,13 @@ button:disabled {
   margin-bottom: 0;
 }
 
+#hourlySaveBtn {
+  font-size: 1.35rem !important;
+  padding: 1rem 2.2rem !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+}
+
 /* GRID */
 .city-grid {
   display: grid;
