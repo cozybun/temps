@@ -52,7 +52,7 @@ async function promptAndSaveBackupEmail(currentStreak) {
   const lastPromptedAt = user.user_metadata?.backup_email_prompted_at;
   if (!isPromptDue(currentStreak, lastPromptedAt)) return;
 
-  const value = window.prompt(" 🎉 You reached a great 7+ day streak! Add a backup email to recover this account: ");
+  const value = window.prompt("🎉 You reached a great 7+ day streak! Want to keep your progress across devices? Save a backup email to recover your account: ");
 
   if (!value) {
     await markBackupEmailPrompt();
@@ -61,7 +61,7 @@ async function promptAndSaveBackupEmail(currentStreak) {
 
   const email = value.trim();
   if (!isValidEmail(email)) {
-    setStatus('<span style="color:red;"> Please enter a valid email. </span>');
+    setStatus('<span style="color:red;"> Please enter a valid email: </span>');
     await markBackupEmailPrompt();
     return;
   }
@@ -73,7 +73,7 @@ async function promptAndSaveBackupEmail(currentStreak) {
   }
 
   await client.auth.updateUser({ data: { backup_email_prompted_at: null } });
-  setStatus('<span style="color:green;"> Backup email saved ✅ </span>');
+  setStatus('<span style="color:green;"> Backup email saved, your progress safe ✅ </span>');
 }
 
 // Helper to get existing user or create new anon
