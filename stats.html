@@ -201,8 +201,8 @@
 <body>
   <div class="wrap">
     <header>
-      <h1 class="title">🌤️ My Stats</h1>
-      <p class="subtitle">A snapshot of my current progress and my bun's stats.</p>
+      <h1 class="title"> 🌤️ My Stats </h1>
+      <p class="subtitle"> A snapshot of my current progress and stats </p>
     </header>
 
     <section class="card">
@@ -249,7 +249,11 @@
     const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0";
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Keep your singleton line (single client in this page runtime)
+    if (!window.__supabase_client) {
+      window.__supabase_client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    const supabase = window.__supabase_client;
 
     const statusEl = document.getElementById("status");
     const panel = document.getElementById("statsPanel");
@@ -306,18 +310,23 @@
       panel.style.display = "none";
 
       try {
-        const localUserId = localStorage.getItem("temps_user_id");
+        // REQUIRED change: use Supabase auth user instead of localStorage user id
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          throw userError;
+        }
 
-        if (!localUserId) {
+        const userId = userData?.user?.id;
+        if (!userId) {
           statusEl.className = "error";
-          statusEl.textContent = "Please load your user ID or create a user ID by making a daily forecast.";
+          statusEl.textContent = "No active user found. Please log in from the main app.";
           return;
         }
-        
+
         const { data, error } = await supabase
           .from("user_stats")
           .select("mood, current_streak, total_coins, coins, last_active")
-          .eq("user_id", localUserId)
+          .eq("user_id", userId)
           .single();
 
         if (error) {
