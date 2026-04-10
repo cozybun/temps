@@ -380,7 +380,7 @@ async function upsertWithSessionRecovery({
       .upsert(rowsWithUser, { onConflict })
       .select();
 
-    if (!error) return { data, error: null };
+    if (!error) return { data, error: null, userId: activeUserId }
 
     if (error.code !== "23503" || attempt >= retries - 1) {
       return { data: null, error };
@@ -428,18 +428,21 @@ async function loadUserScopedDataOrEmpty(queryBuilder) {
 }
 
 // Check to increment user current streak
-async function checkIncrementDailyStreak(payload, forecastDate) {
-  const newHighCityIds = new Set(    // require at least 2 cities with daily high forecasts
+async function checkIncrementDailyStreak(payload, forecastDate, explicitUserId = null) {
+  const uid = explicitUserId || userId;
+  if (!uid) return null;
+
+  const newHighCityIds = new Set(
     payload
       .filter(p => p.high !== undefined && Number.isFinite(Number(p.high)))
       .map(p => p.city_id)
   );
   if (newHighCityIds.size < 2) return null;
 
-  const { data: existing, error: existErr } = await client    // get how many highs already exist for this date before submit
+  const { data: existing, error: existErr } = await client
     .from('daily_forecasts')
     .select('city_id')
-    .eq('user_id', userId)
+    .eq('user_id', uid)
     .eq('date', forecastDate)
     .not('high', 'is', null);
 
@@ -456,30 +459,36 @@ async function checkIncrementDailyStreak(payload, forecastDate) {
 
   if (countBefore >= 2 || countAfter < 2) return null;
 
-  const { data: stats, error: statsErr } = await client    // get current streak
+  const { data: stats, error: statsErr } = await client    // get current streak or default to 0 if row missing
     .from('user_stats')
     .select('current_streak')
-    .eq('user_id', userId)
-    .single();
+    .eq('user_id', uid)
+    .maybeSingle();
 
   if (statsErr) {
     console.error('Failed to read user_stats:', statsErr.message);
     return null;
   }
 
-  const nextStreak = Number(stats?.current_streak || 0) + 1;
+  const currentStreak = Number(stats?.current_streak || 0);
+  const nextStreak = currentStreak + 1;
 
-  const { error: upErr } = await client    // write new streak to user stats
+  // Ensure row exists + update in one step
+  const { data: upserted, error: upErr } = await client
     .from('user_stats')
-    .update({ current_streak: nextStreak })
-    .eq('user_id', userId);
+    .upsert(
+      { user_id: uid, current_streak: nextStreak },
+      { onConflict: 'user_id' } // requires unique constraint on user_stats.user_id
+    )
+    .select('current_streak')
+    .single();
 
   if (upErr) {
     console.error('Failed to update streak:', upErr.message);
     return null;
   }
 
-  return nextStreak;    // return updated value for email prompt
+  return upserted.current_streak;    // return updated streak for email prompt
 }
 
 function isPromptDue(currentStreak, lastPromptedAtIso) {
@@ -1027,24 +1036,31 @@ async function handleDailySubmit(e) {
     return;
   }
 
-  const { error } = await upsertWithSessionRecovery({
+  const result = await upsertWithSessionRecovery({
     table: 'daily_forecasts',
     rows: payload,
     onConflict: 'user_id,city_id,date',
-    allowAnonymous: true    // create anon user only on 1st daily save if needed
+    allowAnonymous: true    // first daily save creates anon session
   });
 
-  if (error) {
-    setStatus(`<span style="color:red;"> Save failed: ${error.message}</span>`);
+  if (result.error) {
+    setStatus(`<span style="color:red;"> Save failed: ${result.error.message}</span>`);
     return;
   }
+
+  const activeUserId = result.userId || userId;   // use actual active user id from upsert result (important after anon/session recovery)
+  if (activeUserId) userId = activeUserId;
 
   hasSavedForecast = true;
   setStatus(`<span style="color:green;"> Saved ${payload.length} forecasts! 🐰 </span>`);
   buildDailyGrid();
 
-  for (const forecastDate of forecastDates) {      // check streak for each forecast date used (safe if timezone edge case creates >1)
-    const updatedStreak = await checkIncrementDailyStreak(payload, forecastDate);
+  for (const forecastDate of forecastDates) {
+    const updatedStreak = await checkIncrementDailyStreak(
+      payload,
+      forecastDate,
+      activeUserId
+    );
     if (updatedStreak !== null) {
       await promptAndSaveBackupEmail(updatedStreak);
       break;
