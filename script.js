@@ -1,6 +1,5 @@
 const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0';
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let userId = null;
@@ -10,8 +9,11 @@ let selectedHour = null;
 let hourlyCurrentDateKey = '';
 let isDailyPage = false;
 let isHourlyPage = false;
+const BACKUP_EMAIL_STREAK = 7;
+const BACKUP_EMAIL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const HOURLY_LABELS = [
+  // "Noon",
   "1PM",
   "2PM",
   "3PM",
@@ -30,6 +32,48 @@ function setStatus(html) {
 function detectPageMode() {
   isDailyPage = !!document.getElementById('tempsForm');
   isHourlyPage = !!document.getElementById('hourlyForm');
+}
+
+function isValidEmail(email) {
+  return /^\S+@\S+\.\S+$/.test(email);
+}
+
+async function promptAndSaveBackupEmail(currentStreak) {
+  if (currentStreak < BACKUP_EMAIL_STREAK) return;
+
+  const {
+    data: { user },
+    error: userErr
+  } = await client.auth.getUser();
+  if (userErr || !user) return;
+
+  if (user.email) return; // stop prompting once user saves an email
+
+  const lastPromptedAt = user.user_metadata?.backup_email_prompted_at;
+  if (!isPromptDue(currentStreak, lastPromptedAt)) return;
+
+  const value = window.prompt(" 🎉 You reached a great 7+ day streak! Add a backup email to recover this account: ");
+
+  if (!value) {
+    await markBackupEmailPrompt();
+    return;
+  }
+
+  const email = value.trim();
+  if (!isValidEmail(email)) {
+    setStatus('<span style="color:red;"> Please enter a valid email. </span>');
+    await markBackupEmailPrompt();
+    return;
+  }
+
+  const { error } = await client.auth.updateUser({ email });
+  if (error) {
+    setStatus(`<span style="color:red;"> Backup email save failed: ${error.message}</span>`);
+    return;
+  }
+
+  await client.auth.updateUser({ data: { backup_email_prompted_at: null } });
+  setStatus('<span style="color:green;"> Backup email saved ✅ </span>');
 }
 
 // Helper to get existing user or create new anon
@@ -53,6 +97,84 @@ async function ensureSession() {
 
   userId = data?.session?.user?.id || null;
   return data?.session || null;
+}
+
+// Check to increment user current streak
+async function checkIncrementDailyStreak(payload, forecastDate) {
+  // require at least 2 cities with daily high forecasts
+  const newHighCityIds = new Set(
+    payload
+      .filter(p => p.high !== undefined && Number.isFinite(Number(p.high)))
+      .map(p => p.city_id)
+  );
+  if (newHighCityIds.size < 2) return null;
+
+  // get how many highs already exist for this date before submit
+  const { data: existing, error: existErr } = await client
+    .from('daily_forecasts')
+    .select('city_id')
+    .eq('user_id', userId)
+    .eq('date', forecastDate)
+    .not('high', 'is', null);
+
+  if (existErr) {
+    console.error('Failed to read existing highs:', existErr.message);
+    return null;
+  }
+
+  const existingSet = new Set((existing || []).map(r => r.city_id));
+  const countBefore = existingSet.size;
+
+  newHighCityIds.forEach(id => existingSet.add(id));
+  const countAfter = existingSet.size;
+
+  if (countBefore >= 2 || countAfter < 2) return null;
+
+  const { data: stats, error: statsErr } = await client // get current streak
+    .from('user_stats')
+    .select('current_streak')
+    .eq('user_id', userId)
+    .single();
+
+  if (statsErr) {
+    console.error('Failed to read user_stats:', statsErr.message);
+    return null;
+  }
+
+  const nextStreak = Number(stats?.current_streak || 0) + 1;
+
+  const { error: upErr } = await client // write new streak to user stats
+    .from('user_stats')
+    .update({ current_streak: nextStreak })
+    .eq('user_id', userId);
+
+  if (upErr) {
+    console.error('Failed to update streak:', upErr.message);
+    return null;
+  }
+
+  return nextStreak; // return updated value for email prompt
+}
+
+function isPromptDue(currentStreak, lastPromptedAtIso) {
+  if (currentStreak < BACKUP_EMAIL_STREAK) return false;
+  if (!lastPromptedAtIso) return true;
+
+  const last = Date.parse(lastPromptedAtIso);
+  if (Number.isNaN(last)) return true;
+
+  return Date.now() - last >= BACKUP_EMAIL_INTERVAL_MS;
+}
+
+async function markBackupEmailPrompt() {
+  const nowIso = new Date().toISOString();
+  const { error } = await client.auth.updateUser({
+    data: { backup_email_prompted_at: nowIso }
+  });
+  if (error) {
+    console.error("Could not save prompt timestamp:", error.message);
+  }
+  return nowIso;
 }
 
 // Time helpers
@@ -515,8 +637,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Save handler: daily form
-function handleDailySubmit(e) {
+// Daily save handler
+async function handleDailySubmit(e) {
   e.preventDefault();
 
   const forecastDaySelect = document.getElementById('forecastDay');
@@ -524,6 +646,7 @@ function handleDailySubmit(e) {
 
   const forecastDay = forecastDaySelect.value;
   const payload = [];
+  const forecastDates = new Set();
   let blocked = false;
 
   document.querySelectorAll('.daily-high, .daily-low').forEach(input => {
@@ -546,53 +669,62 @@ function handleDailySubmit(e) {
       return;
     }
 
-    const type = input.classList.contains('daily-high')
-      ? 'high'
-      : 'low';
+    const dateValue =
+      forecastDay === 'today'
+        ? getCityLocalDateISO(city.timezone, 0)
+        : getCityLocalDateISO(city.timezone, 1);
+
+    const type = input.classList.contains('daily-high') ? 'high' : 'low';
 
     let entry = payload.find(p => p.city_id === cityId);
-
     if (!entry) {
       entry = {
         city_id: cityId,
         city: city.name,
-        date:
-          forecastDay === 'today'
-            ? getCityLocalDateISO(city.timezone, 0)
-            : getCityLocalDateISO(city.timezone, 1),
+        date: dateValue,
         user_id: userId
       };
       payload.push(entry);
     }
 
     entry[type] = Number(val);
+    forecastDates.add(dateValue);
   });
 
   if (blocked) {
-    setStatus('<span style="color:red;">Cutoff passed for at least 1 city.</span>');
+    setStatus('<span style="color:red;"> Cutoff passed for at least 1 city </span>');
     return;
   }
 
   if (!payload.length) {
-    setStatus('<span style="color:red;">Enter at least 1 valid forecast!</span>');
+    setStatus('<span style="color:red;"> Enter at least 1 valid forecast! </span>');
     return;
   }
 
-  client
+  const { error } = await client
     .from('daily_forecasts')
-    .upsert(payload, { onConflict: 'user_id,city_id,date' })
-    .then(({ error }) => {
-      if (error) {
-        setStatus(`<span style="color:red;">Save failed: ${error.message}</span>`);
-      } else {
-        hasSavedForecast = true;
-        setStatus(`<span style="color:green;">Saved ${payload.length} forecasts! 🐰</span>`);
-        buildDailyGrid();
-      }
-    });
+    .upsert(payload, { onConflict: 'user_id,city_id,date' });
+
+  if (error) {
+    setStatus(`<span style="color:red;"> Save failed: ${error.message}</span>`);
+    return;
+  }
+
+  hasSavedForecast = true;
+  setStatus(`<span style="color:green;"> Saved ${payload.length} forecasts! 🐰 </span>`);
+  buildDailyGrid();
+
+  // check streak for each forecast date used (safe if timezone edge case creates >1)
+  for (const forecastDate of forecastDates) {
+    const updatedStreak = await checkIncrementDailyStreak(payload, forecastDate);
+    if (updatedStreak !== null) {
+      await promptAndSaveBackupEmail(updatedStreak);
+      break;
+    }
+  }
 }
 
-// Save handler: hourly form
+// Hourly save handler
 async function handleHourlySubmit(e) {
   e.preventDefault();
 
