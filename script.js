@@ -780,7 +780,7 @@ async function buildDailyGrid() {
           : ''}
 
         ${hasPrevGuess
-          ? `<p><small>Your current forecast: H ${prevGuess.high ?? '-'}° / L ${prevGuess.low ?? '-'}°</small></p>`
+          ? `<p><small> My current forecast: H ${prevGuess.high ?? '-'}° / L ${prevGuess.low ?? '-'}° </small></p>`
           : ''}
 
         <label>High Temp °F:
@@ -802,7 +802,7 @@ async function buildDailyGrid() {
         </label>
 
         ${isPastCutoff
-          ? '<small style="color:#e74c3c; display:block; margin-top:0.5rem;">Past cutoff (noon local)</small>'
+          ? '<small style="color:#e74c3c; display:block; margin-top:0.5rem;"> Past cutoff (noon local) </small>'
           : ''}
       </div>
     `;
