@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title> Forecast History </title>
+  <title>Forecast History</title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -510,6 +510,7 @@
 
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNreXFrbmx4bWpxbGtxbnhoZ2VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDEwNjksImV4cCI6MjA4MDQ3NzA2OX0.KPzrKD3TW1CubAQhHyo5oJV0xQ_GLxBG96FSDfTN6p0';
+
     if (!window.__supabase_client) {
       window.__supabase_client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
@@ -601,32 +602,6 @@
       else statusEl.className = "status";
     }
 
-    function getUserId() {
-      const fromQuery = new URLSearchParams(location.search).get("user_id");
-      if (fromQuery && fromQuery.trim()) {
-        localStorage.setItem("temps_user_id", fromQuery.trim());
-        return fromQuery.trim();
-      }
-      const stored = localStorage.getItem("temps_user_id");
-      if (stored && stored.trim()) return stored.trim();
-      const legacy = localStorage.getItem("user_id");
-      if (legacy && legacy.trim()) {
-        localStorage.setItem("temps_user_id", legacy.trim());
-        return legacy.trim();
-      }
-      return null;
-    }
-
-    function toNumber(v) {
-      if (v === null || v === undefined || v === "") return null;
-      if (typeof v === "number") return Number.isFinite(v) ? v : null;
-      const s = String(v).trim();
-      const match = s.match(/[-+]?\d+(?:[.,]\d+)?/);
-      if (!match) return null;
-      const n = Number(match[0].replace(",", "."));
-      return Number.isFinite(n) ? n : null;
-    }
-
     function getFirstNumber(row, keys) {
       for (const key of keys) {
         const n = toNumber(row[key]);
@@ -678,20 +653,20 @@
 
     function parseDateValue(value) {
       if (!value) return 0;
-    
+
       const s = String(value).trim();
-    
+
       // parse YYYY-MM-DD as an ET date safely, no local UTC rollover
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (m) {
         const year = Number(m[1]);
         const monthIndex = Number(m[2]) - 1; // 0-based for Date.UTC
         const day = Number(m[3]);
-    
+
         // use local-noon UTC anchor to avoid date drift when formatted in ET
         return Date.UTC(year, monthIndex, day, 12, 0, 0);
       }
-    
+
       return Date.parse(s) || 0; // fallback for any other format
     }
 
@@ -759,31 +734,25 @@
       return `${h} ${ap}`;
     }
 
-    function formatDisplayDate(
-      row,
-      hasHour = true,
-      hourParser = parseHourInfo
-    ) {
+    function formatDisplayDate(row, hasHour = true, hourParser = parseHourInfo) {
       if (!row?.date) return "—";
-    
+
       const t = parseDateValue(row.date);
       if (!Number.isFinite(t)) return String(row.date);
-    
+
       const dateText = new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
         month: "short",
         day: "numeric",
         year: "numeric",
       }).format(new Date(t));
-    
+
       if (!hasHour) return `${dateText} ET`;
-    
+
       const hourInfo = typeof hourParser === "function" ? hourParser(row.hour) : null;
       if (!hourInfo) return `${dateText} ET`;
-    
-      return `${dateText}, ${formatHourLabel(hourInfo.hour)} ET${
-        hourInfo.isSixHourHigh ? " 6-hr high" : ""
-      }`;
+
+      return `${dateText}, ${formatHourLabel(hourInfo.hour)} ET${hourInfo.isSixHourHigh ? " 6-hr high" : ""}`;
     }
 
     function formatRange(row, isForecast = true) {
@@ -863,6 +832,16 @@
       if (high === null && low === null) return null;
       if (low === null) return high;
       return (high + low) / 2;
+    }
+
+    function toNumber(v) {
+      if (v === null || v === undefined || v === "") return null;
+      if (typeof v === "number") return Number.isFinite(v) ? v : null;
+      const s = String(v).trim();
+      const match = s.match(/[-+]?\d+(?:[.,]\d+)?/);
+      if (!match) return null;
+      const n = Number(match[0].replace(",", "."));
+      return Number.isFinite(n) ? n : null;
     }
 
     function sortRows(list) {
@@ -1159,10 +1138,46 @@
       hourlyModeBtn.classList.toggle("secondary", isDaily);
     }
 
+    async function resolveAuthUserId() {
+      // Prefer existing session
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw new Error(`Session check failed: ${sessionError.message}`);
+      }
+
+      if (sessionData?.session?.user?.id) {
+        return sessionData.session.user.id;
+      }
+
+      // Fallback: sign in anonymously
+      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
+      if (anonError) {
+        throw new Error(`Anonymous sign-in failed: ${anonError.message}`);
+      }
+
+      const anonUser = anonData?.user ?? anonData?.session?.user;
+      if (!anonUser?.id) {
+        throw new Error("Could not determine authenticated user after anonymous sign-in.");
+      }
+
+      return anonUser.id;
+    }
+
     async function loadData() {
-      const userId = getUserId();
-      if (!userId) {
-        setStatus("No user_id found. Add ?user_id=... in the URL or save it in localStorage under temps_user_id.", "error");
+      let userId;
+      try {
+        setStatus("Authenticating...", "loading");
+        userId = await resolveAuthUserId();
+      } catch (err) {
+        setStatus(`Authentication error: ${err.message}`, "error");
+        tbody.innerHTML = "";
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.className = "empty";
+        td.colSpan = visibleColumnCount();
+        td.textContent = "Could not authenticate user.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
       }
 
@@ -1205,7 +1220,7 @@
 
       buildCityOptions();
       state.filteredRows = [...state.rows];
-      setStatus(`Loaded ${state.rows.length} ${cfg.label} record(s).`, "default");
+      setStatus(`Loaded ${state.rows.length} ${cfg.label.toLowerCase()} record(s).`, "default");
       state.page = 1;
       state.pageSize = parseInt(pageSizeInput.value, 10) || 50;
       applyFilters(false);
