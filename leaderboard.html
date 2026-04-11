@@ -87,14 +87,19 @@
     button {
       border: 0;
       border-radius: 999px;
-      padding: 10px 16px;
-      font-size: 1.02rem;
+      padding: 12px 24px;
+      font-size: 1.12rem;
       font-weight: var(--fw-heavy);
       cursor: pointer;
       background: linear-gradient(120deg, #b77cff, #a78bfa);
       color: #fff;
       transition: transform .12s ease, filter .12s ease;
       box-shadow: 0 8px 18px rgba(158, 106, 255, 0.28);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
     }
 
     .board {
@@ -251,6 +256,10 @@
       .coins { font-size: 0.96rem; padding: 7px 10px; }
       .empty, .error { font-size: 0.95rem; }
       .error-title, .error-line { font-size: 0.92rem; }
+      button {
+        padding: 10px 20px;
+        font-size: 1.03rem;
+      }
     }
   </style>
 </head>
@@ -262,7 +271,7 @@
         <p class="subtitle">View top users &amp; you</p>
       </div>
       <div class="toolbar">
-        <button id="refreshBtn">Refresh</button>
+        <button id="refreshBtn" type="button">Go to Daily</button>
       </div>
     </section>
 
@@ -448,15 +457,15 @@
       const ordered = [...players]    // sort by coins then streak if tied then mood if still tied then created_at as tiebreaker
         .sort((a, b) => {
           if (b.coins !== a.coins) return b.coins - a.coins;
-    
+
           if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
-    
+
           if (b.mood !== a.mood) return b.mood - a.mood;
-    
+
           const at = new Date(a.created_at).getTime();
           const bt = new Date(b.created_at).getTime();
           if (!Number.isNaN(at) && !Number.isNaN(bt)) return at - bt;
-    
+
           return 0;
         })
         .map((player, idx) => ({ ...player, displayRank: idx + 1 }));
@@ -566,7 +575,10 @@
       console.error("Leaderboard load failed:", errors);
     }
 
-    refreshBtn.addEventListener("click", fetchLeaderboard);
+    refreshBtn.addEventListener("click", () => {
+      window.location.href = "daily.html";
+    });
+
     fetchLeaderboard();
   </script>
 </body>
