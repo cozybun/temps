@@ -1254,6 +1254,39 @@ function initBindings() {
   initRevealBtn();
 }
 
+function initDailyHelpModal() {
+  const modal = document.getElementById("dailyHelpModal");
+  const howToBtn = document.getElementById("howToBtn") || document.getElementById("helpBtn");
+  const understoodBtn = document.getElementById("helpDoneBtn");
+
+  if (!modal || !howToBtn || !understoodBtn) return;
+
+  const showModal = () => modal.classList.remove("hidden");
+  const hideModal = () => modal.classList.add("hidden");
+
+  howToBtn.addEventListener("click", (e) => {    // Show modal on How To button click
+    e.preventDefault();
+    showModal();
+  });
+
+  understoodBtn.addEventListener("click", (e) => {      // close model only with Understood button
+    e.preventDefault();
+    hideModal();
+  });
+
+  const xButtons = modal.querySelectorAll(    // hide close UI inside modal
+    '#helpCloseBtn, .help-close, .close-btn, .modal-close, [aria-label="Close"], [data-modal-close]'
+  );
+  xButtons.forEach((btn) => {
+    btn.style.display = "none";
+    btn.setAttribute("aria-hidden", "true");
+    btn.tabIndex = -1;
+    btn.disabled = true;
+  });
+
+  modal.classList.add("hidden");
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await handleAuthCallbackFromUrl();
   detectPageMode();
