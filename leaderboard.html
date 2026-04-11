@@ -293,7 +293,7 @@
       "Content-Type": "application/json"
     };
 
-    const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=id,username,coins`;
+    const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=user_id,username,coins`;
     const SOURCE_LABEL = "leaderboard view";
 
     const formatNumber = (value) => Number(value || 0).toLocaleString("en-US");
