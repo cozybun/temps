@@ -1056,6 +1056,7 @@ async function handleDailySubmit(e) {
 
   for (const forecastDate of forecastDates) {
     const updatedStreak = await checkIncrementDailyStreak(
+      console.log("Streak result:", updatedStreak);
       payload,
       forecastDate,
       activeUserId
