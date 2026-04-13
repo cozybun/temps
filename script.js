@@ -491,7 +491,7 @@ async function incrementDailyStreak(uid, nextStreak) {
       .from("user_stats")
       .select("current_streak, mood")
       .eq("user_id", uid)
-      .single();
+      .maybeSingle();
 
     if (readError) return { ok: false, error: readError };
 
@@ -1123,7 +1123,7 @@ async function handleDailySubmit(e) {
 
   if (lowOnlyCities.length) {
     setStatus(
-      `<span style="color:red;">A Low requires a High in the same city. Missing High forecast for: ${lowOnlyCities.join(", ")}</span>`
+      `<span style="color:red;"> A Low requires a High in the same city. Missing High forecast for: ${lowOnlyCities.join(", ")}</span>`
     );
     return;
   }
@@ -1135,7 +1135,7 @@ async function handleDailySubmit(e) {
     return;
   }
 
-  const preSaveSession = await ensureSession(true, { allowAnonymous: true });      // ensure active user session before streak check (allow anon creation on first daily save)
+  const preSaveSession = await ensureSession(true, { allowAnonymous: true });    // ensure active user session before streak check (allow anon creation on first daily save)
   const activeUserId = preSaveSession?.user?.id || userId;
   if (!activeUserId) {
     setStatus('<span style="color:red;">No active session. Please try again.</span>');
@@ -1185,8 +1185,8 @@ async function handleDailySubmit(e) {
       await promptAndSaveBackupEmail(predictedStreak.nextStreak);
       setStatus(`<span style="color: #16a34a;">${streakResult.message}</span>`);
     } else {
-      console.warn("Daily streak increment write failed:", apply.error);
-      setStatus(`<span style="color:orange;"> Saved, but streak update failed: ${apply.error.message}</span>`);
+      console.warn("Daily streak increment write failed:", streakResult.error);
+      setStatus(`<span style="color:orange;"> Saved, but streak update failed: ${streakResult.error.message}</span>`);
     }
   }
 }
