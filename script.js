@@ -486,27 +486,48 @@ async function checkIncrementDailyStreak(payload, forecastDate, explicitUserId =
 
 // Update user's current mood & streak
 async function incrementDailyStreak(uid, nextStreak) {
-  const { data: row, error: fetchErr } = await client    // get current mood
+  try {
+    const { data: row, error: readError } = await client    // read current values
       .from("user_stats")
-      .select("mood")
+      .select("current_streak, mood")
       .eq("user_id", uid)
       .single();
-  
-  if (fetchErr) return { ok: false, error: fetchErr };
-  const nextMood = Math.min(25, (row?.mood ?? 0) + 1);
-  
-  const { error } = await client
-    .from("user_stats")
-    .upsert(
-      {
-        user_id: uid,
-        current_streak: nextStreak,
-        mood: nextMood,
-      },
-      { onConflict: "user_id" }
-    );
-  
-  return { ok: !error, error };
+
+    if (readError) return { ok: false, error: readError };
+
+    const prevStreak = row?.current_streak ?? 0;
+    const prevMood = row?.mood ?? 0;
+    const nextMood = Math.min(25, prevMood + 1);
+
+    const { data: updated, error } = await client
+      .from("user_stats")
+      .upsert(
+        { user_id: uid, current_streak: nextStreak, mood: nextMood },
+        { onConflict: "user_id" }
+      )
+      .select()
+      .single();
+
+    if (error) return { ok: false, error };
+
+    const moodCapped = prevMood >= 25;
+    const message = moodCapped
+      ? `🎉 Yay, your streak grew to ${nextStreak}! Mood is maxed at 25.`
+      : `🎉 Yay, your streak grew to ${nextStreak}! Mood rose +1 to ${nextMood}.`;
+
+    return {
+      ok: true,
+      data: updated,
+      prevStreak,
+      nextStreak,
+      prevMood,
+      nextMood,
+      moodCapped,
+      message,
+    };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 function isPromptDue(currentStreak, lastPromptedAtIso) {
@@ -1159,9 +1180,10 @@ async function handleDailySubmit(e) {
   buildDailyGrid();
 
   if (predictedStreak?.ok) {
-    const apply = await incrementDailyStreak(finalUserId, predictedStreak.nextStreak);
-    if (apply.ok) {
+    const streakResult = await incrementDailyStreak(finalUserId, predictedStreak.nextStreak);
+    if (streakResult.ok) {
       await promptAndSaveBackupEmail(predictedStreak.nextStreak);
+      setStatus(`<span style="color: #16a34a;">${streakResult.message}</span>`);
     } else {
       console.warn("Daily streak increment write failed:", apply.error);
       setStatus(`<span style="color:orange;"> Saved, but streak update failed: ${apply.error.message}</span>`);
