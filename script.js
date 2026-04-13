@@ -556,7 +556,7 @@ async function markBackupEmailPrompt() {
 }
 
 // Time helpers
-function getCityLocalDateISO(timezone, offset = 0) {
+function getCityLocalDateISO(timezone, offset = 0) {    // get local date of city
   const now = new Date();
   const local = new Date(
     now.toLocaleString("en-US", { timeZone: timezone })
@@ -569,6 +569,27 @@ function getCityLocalDateISO(timezone, offset = 0) {
   const day = String(local.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+}
+
+function getDailyForecastDateISO(forecastDay = "today") {    // get forecast date based on PT
+  const ptNow = getPTNow();
+  const ptCutoff = new Date(ptNow);
+  ptCutoff.setHours(12, 0, 0, 0);
+
+  const gameDate = new Date(ptNow);
+
+  if (ptNow >= ptCutoff) {    // daily date switches at noon PT
+    gameDate.setDate(gameDate.getDate() + 1);
+  }
+
+  if (forecastDay === "tomorrow") {    // forecast date switch
+    gameDate.setDate(gameDate.getDate() + 1);
+  }
+
+  const y = gameDate.getFullYear();
+  const m = String(gameDate.getMonth() + 1).padStart(2, "0");
+  const d = String(gameDate.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function getETGameDateISO(useTomorrow = false) {
@@ -769,12 +790,8 @@ async function buildDailyGrid() {
 
   cities.forEach(city => {
     const stationDisplay = getStationDisplay(city);
-
-    const cityToday = getCityLocalDateISO(city.timezone, 0);
-    const cityTomorrow = getCityLocalDateISO(city.timezone, 1);
     const cityYesterday = getCityLocalDateISO(city.timezone, -1);
-
-    const targetDate = forecastDay === 'today' ? cityToday : cityTomorrow;
+    const targetDate = getDailyForecastDateISO(forecastDay);
     const showYesterday = forecastDay === 'today';
 
     const cityActuals = actuals
@@ -1023,6 +1040,7 @@ async function handleDailySubmit(e) {
   if (!forecastDaySelect) return;
 
   const forecastDay = forecastDaySelect.value;
+  const forecastDate = getDailyForecastDateISO(forecastDay);
 
   const inputs = document.querySelectorAll('.daily-high, .daily-low');
   const rowsByCity = new Map();
@@ -1055,21 +1073,25 @@ async function handleDailySubmit(e) {
     const city = cities.find(c => c.id === cityId);
     if (!city) return;
 
+    const ptNow = getPTNow();
+    const ptCutoff = new Date(ptNow);
+    ptCutoff.setHours(12, 0, 0, 0);
+
     const localNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: city.timezone })
     );
     const cutoff = new Date(localNow);
     cutoff.setHours(12, 0, 0, 0);
 
-    if (forecastDay === 'today' && localNow >= cutoff) {
+    if (
+      forecastDay === 'today' &&
+      (ptNow >= ptCutoff || localNow >= cutoff)
+    ) {
       blocked = true;
       return;
     }
 
-    const dateValue =
-      forecastDay === 'today'
-        ? getCityLocalDateISO(city.timezone, 0)
-        : getCityLocalDateISO(city.timezone, 1);
+    const dateValue = forecastDate;
 
     let row = rowsByCity.get(cityId);
     if (!row) {
