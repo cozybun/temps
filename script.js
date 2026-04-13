@@ -1083,10 +1083,7 @@ async function handleDailySubmit(e) {
     const cutoff = new Date(localNow);
     cutoff.setHours(12, 0, 0, 0);
 
-    if (
-      forecastDay === 'today' &&
-      (ptNow >= ptCutoff || localNow >= cutoff)
-    ) {
+    if (forecastDay === 'today' && (ptNow >= ptCutoff || localNow >= cutoff)) {
       blocked = true;
       return;
     }
