@@ -135,25 +135,54 @@ function getSessionFromAuthPayload(data) {
   return data?.session || null;
 }
 
+// Create new anon session & upsert new uid into users table before writing forecasts
 async function createAnonymousSession() {
   try {
     const { data, error } = await client.auth.signInAnonymously();
-
     if (error) {
       console.error("Anon sign-in error:", error.message);
       return null;
     }
 
-    const newUserId = getUserIdFromAuthPayload(data);
-    if (!newUserId) {
+    const session = getSessionFromAuthPayload(data);
+    const uid = getUserIdFromAuthPayload(data);    // handles data.user?.id or data.session?.user?.id
+    if (!uid || !session) {
       console.error("Anon sign-in returned no user id:", data);
       return null;
     }
 
-    userId = newUserId;
-    return getSessionFromAuthPayload(data);
+    const syncRows = [
+      { id: uid, is_anonymous: true, created_at: new Date().toISOString() },    // optional columns
+      { id: uid }    // guaranteed fallback
+    ];
+
+    let usersError = null;
+    for (const row of syncRows) {
+      const { error: upsertError } = await client
+        .from("users")
+        .upsert(row, { onConflict: "id" });
+
+      if (!upsertError) {
+        usersError = null;
+        break;
+      }
+
+      usersError = upsertError;
+
+      if (upsertError.code !== "42703") {    // retry fallback row only for unknown-column errors, 42703 is undefined column
+        break;
+      }
+    }
+
+    if (usersError) {
+      console.error("Failed to upsert public users row:", usersError.message);
+      return null;
+    }
+
+    userId = uid;
+    return session;
   } catch (err) {
-    console.error("Unexpected anon sign-in error:", err.message || err);
+    console.error("Unexpected anon sign-in error:", err?.message || err);
     return null;
   }
 }
