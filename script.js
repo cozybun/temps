@@ -1165,7 +1165,6 @@ async function handleDailySubmit(e) {
         city_id: cityId,
         city: city.name,
         date: dateValue,
-        user_id: userId,
         _hasHigh: false,
         _hasLow: false
       };
@@ -1386,8 +1385,7 @@ async function handleHourlySubmit(e) {
       city: city.name,
       date: selectedForecastDate,
       hour: inputHour,
-      temp: numVal,
-      user_id: userId
+      temp: numVal
     });
   });
 
