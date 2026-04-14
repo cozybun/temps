@@ -551,8 +551,8 @@
   let shareTimer = null;
   let bannerTimer = null;
 
-  if (!SUPABASE_ANON_KEY) {
-    console.error("Missing Supabase anon key");
+  if (!SUPABASE_PUB_KEY) {
+    console.error("Missing Supabase publishable key");
   }
 
   if (!window.supabase || !window.supabase.createClient) {
@@ -561,7 +561,7 @@
   }
 
   const { createClient } = window.supabase;
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const client = createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
 
   function showBanner(message, isError = false) {
     const banner = document.getElementById("scoreErrorBanner");
