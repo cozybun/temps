@@ -722,8 +722,12 @@ async function markBackupEmailPrompt() {
 }
 
 // Time helpers
-function getTzDate(timeZone, date = new Date()) {    // get a timezone-normalized UTC Date to avoid browser timezone bug
-  const p = Object.fromEntries(
+const TIMEZONE_ET = "America/New_York";
+const TIMEZONE_PT = "America/Los_Angeles";
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+
+function getDatePartsInTZ(timeZone, date = new Date()) {
+  const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone,
       year: "numeric",
@@ -739,24 +743,28 @@ function getTzDate(timeZone, date = new Date()) {    // get a timezone-normalize
       .map((x) => [x.type, x.value])
   );
 
-  return new Date(
-    Date.UTC(
-      Number(p.year),
-      Number(p.month) - 1,
-      Number(p.day),
-      Number(p.hour),
-      Number(p.minute),
-      Number(p.second)
-    )
-  );
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: Number(parts.hour),
+    minute: Number(parts.minute),
+    second: Number(parts.second)
+  };
+}
+
+function toWallClockDate(timeZone, date = new Date()) {
+  const p = getDatePartsInTZ(timeZone, date);
+  return new Date(Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second));    // date object whose UTC fields represent local wall-clock in timeZone
+}
+
+function getTzDate(timeZone, date = new Date()) {
+  return toWallClockDate(timeZone, date);
 }
 
 function formatMonthDayInTZ(date, timeZone) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    month: "short",
-    day: "numeric"
-  }).format(date);
+  const p = getDatePartsInTZ(timeZone, date);
+  return `${MONTH_ABBR[p.month - 1]} ${p.day}, ${p.year}`;
 }
 
 function toYMD(d) {
@@ -765,24 +773,29 @@ function toYMD(d) {
   return `${d.getUTCFullYear()}-${mm}-${dd}`;
 }
 
-function getCityLocalDateISO(tz, offsetDays = 0) {    // get local date of city
+function getCityLocalDateISO(tz, offsetDays = 0) {
   const d = getTzDate(tz);
   d.setUTCDate(d.getUTCDate() + offsetDays);
   return toYMD(d);
 }
 
-function getDailyForecastDateISO(forecastDay = "today") {    // get forecast date based on PT
+function getDailyForecastDateISO(forecastDay = "today") {
   const gameDate = getPTNow();
 
-  if (forecastDay === "tomorrow") {    // tomorrow forecast date
+  if (forecastDay === "tomorrow") {
     gameDate.setUTCDate(gameDate.getUTCDate() + 1);
   }
 
   return toYMD(gameDate);
 }
 
-function getETNow() { return getTzDate("America/New_York"); }
-function getPTNow() { return getTzDate("America/Los_Angeles"); }
+function getETNow() {
+  return getTzDate(TIMEZONE_ET);
+}
+
+function getPTNow() {
+  return getTzDate(TIMEZONE_PT);
+}
 
 function getETGameDateISO(useTomorrow = false) {
   const etNow = getETNow();
@@ -790,7 +803,6 @@ function getETGameDateISO(useTomorrow = false) {
   if (useTomorrow) {
     gameDate.setUTCDate(gameDate.getUTCDate() + 1);
   }
-
   return toYMD(gameDate);
 }
 
@@ -810,25 +822,28 @@ function isPastCutoffForHour(etNow, useTomorrow, hourValue) {
   return etNow >= getHourlyCutoff(etNow, hourValue);
 }
 
-// Compute hourly game date context and display label
+// Fixed hourly forecast date switch at last hourly using actual ET wall-clock hour
 function getHourlyGameDateMeta() {
-  const etNow = getETNow();
+  const etParts = getDatePartsInTZ(TIMEZONE_ET);
+  const etNow = new Date(
+    Date.UTC(etParts.year, etParts.month - 1, etParts.day, etParts.hour, etParts.minute, etParts.second)
+  );
 
-  const switchTime = new Date(etNow.getTime());
-  switchTime.setUTCHours(HOURLY_GAME_SWITCH_HOUR_ET, 0, 0, 0);
+  const useTomorrow = etParts.hour >= HOURLY_GAME_SWITCH_HOUR_ET;
 
-  const useTomorrow = etNow >= switchTime;
-
-  const labelDate = new Date(etNow.getTime());
+  const gameDateObj = new Date(Date.UTC(etParts.year, etParts.month - 1, etParts.day, 12, 0, 0));
   if (useTomorrow) {
-    labelDate.setUTCDate(labelDate.getUTCDate() + 1);
+    gameDateObj.setUTCDate(gameDateObj.getUTCDate() + 1);
   }
+
+  const gameDate = toYMD(gameDateObj);
+  const gameDateLabel = `${MONTH_ABBR[gameDateObj.getUTCMonth()]} ${gameDateObj.getUTCDate()}, ${gameDateObj.getUTCFullYear()}`;
 
   return {
     etNow,
     useTomorrow,
-    gameDate: getETGameDateISO(useTomorrow),
-    gameDateLabel: formatMonthDayInTZ(labelDate, "America/New_York")
+    gameDate,
+    gameDateLabel
   };
 }
 
