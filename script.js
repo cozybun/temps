@@ -89,6 +89,58 @@ async function recoverByResettingAuth({ allowAnonymous = false } = {}) {    // a
   return createAnonymousSession();
 }
 
+const BACKUP_USERNAME_INPUT_HINT = "Your 7+ day streak unlocked a backup account option. " + "This helps protect your streak and score across devices.\n\n" +
+  "Username: alphanumeric only, 3-16 chars.";
+
+function getBackupUsernameFromMetadata(user) {
+  return (
+    (user?.user_metadata?.public_username ||
+      user?.user_metadata?.username ||
+      "").trim()
+  );
+}
+
+async function claimBackupEmail(uid, email) {
+  const { data, error } = await client.rpc("claim_public_email", {
+    p_user_id: uid,
+    p_email: email
+  });
+
+  if (error) {
+    return { ok: false, message: `Backup email save failed: ${error.message}` };
+  }
+
+  if (data === null || data === false) {    // assume function returns null when email is taken or invalid to claim
+    return { ok: false, message: "That email is already in use or unavailable" };
+  }
+
+  return { ok: true, value: data };
+}
+
+async function claimBackupUsername(uid, rawUsername) {
+  const raw = String(rawUsername || "").trim();
+  if (!raw) return { ok: false, message: "Username cannot be empty" };
+
+  const normalized = raw.toLowerCase().trim();
+  if (!/^[a-zA-Z0-9]{3,16}$/.test(normalized)) {
+    return {
+      ok: false,
+      message: "Username must be 3-16 characters and alphanumeric only"
+    };
+  }
+
+  const { data, error } = await client.rpc("claim_public_username", {
+    p_user_id: uid,
+    p_desired_username: normalized
+  });
+
+  if (error) return { ok: false, message: `Username save failed: ${error.message}` };
+  if (data === null || data === false) return { ok: false, message: "That username is already taken" };
+
+  return { ok: true, value: data };
+}
+
+// Prompt user to save email & username 
 async function promptAndSaveBackupEmail(currentStreak) {
   if (currentStreak < BACKUP_EMAIL_STREAK) return;
 
@@ -96,35 +148,69 @@ async function promptAndSaveBackupEmail(currentStreak) {
     data: { user },
     error: userErr
   } = await client.auth.getUser();
+
   if (userErr || !user) return;
 
-  if (user.email) return;    // stop prompting once user saves an email
+  const needsEmail = !user.email;
+  const needsUsername = !Boolean(getBackupUsernameFromMetadata(user));
+
+  if (!needsEmail && !needsUsername) return;
 
   const lastPromptedAt = user.user_metadata?.backup_email_prompted_at;
   if (!isPromptDue(currentStreak, lastPromptedAt)) return;
 
-  const value = window.prompt("🎉 You reached a great 7+ day streak! Want to keep your progress across devices? Save a backup email to recover your account: ");
+  const saved = [];
 
-  if (!value) {
-    await markBackupEmailPrompt();
-    return;
+  if (needsEmail) {
+    const raw = window.prompt(
+      "🎉 7+ day streak! Save a backup email to recover your account across devices:"
+    );
+
+    if (!raw) {
+      await markBackupEmailPrompt();
+      return;
+    }
+
+    const email = raw.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      setStatus('<span style="color:red;"> Please enter a valid email.</span>');
+      await markBackupEmailPrompt();
+      return;
+    }
+
+    const claimed = await claimBackupEmail(user.id, email);
+    if (!claimed.ok) {
+      setStatus(`<span style="color:red;"> ${claimed.message}</span>`);
+      await markBackupEmailPrompt();
+      return;
+    }
+    saved.push("email");
   }
 
-  const email = value.trim();
-  if (!isValidEmail(email)) {
-    setStatus('<span style="color:red;"> Please enter a valid email: </span>');
-    await markBackupEmailPrompt();
-    return;
-  }
+  if (needsUsername) {
+    const raw = window.prompt(BACKUP_USERNAME_INPUT_HINT);
 
-  const { error } = await client.auth.updateUser({ email });
-  if (error) {
-    setStatus(`<span style="color:red;"> Backup email save failed: ${error.message}</span>`);
-    return;
+    if (!raw) {
+      await markBackupEmailPrompt();
+      return;
+    }
+
+    const claimed = await claimBackupUsername(user.id, raw);
+    if (!claimed.ok) {
+      setStatus(`<span style="color:red;"> ${claimed.message}</span>`);
+      await markBackupEmailPrompt();
+      return;
+    }
+    saved.push("username");
   }
 
   await client.auth.updateUser({ data: { backup_email_prompted_at: null } });
-  setStatus('<span style="color:green;"> Backup email saved, your progress safe ✅ </span>');
+
+  if (saved.length) {
+    setStatus(
+      `<span style="color:green;"> Backup info saved (${saved.join(", ")}). Your progress is safe now ✅ </span>`
+    );
+  }
 }
 
 function getUserIdFromAuthPayload(data) {
