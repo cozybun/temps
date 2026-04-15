@@ -7,7 +7,6 @@ body {
   font-size: 1.15rem;
 }
 
-/* HEADER */
 h1 {
   text-align: center;
   color: #1f2937;
@@ -54,7 +53,7 @@ button {
 }
 
 button:hover {
-  background: #3b82f6; /* slightly deeper blue on hover */
+  background: #3b82f6;
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(79, 70, 229, 0.3);
 }
@@ -130,6 +129,14 @@ button:disabled {
   background: #0096FF;
 }
 
+#hourlySaveBtn:disabled {
+  background: #ffffff !important;
+  color: #1d4ed8 !important;    
+  border: 2px solid #93c5fd !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+}
+
 #hourlyScoreBtn {
   background: #32CD32;
 }
@@ -138,7 +145,6 @@ button:disabled {
   box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
 }
 
-/* GRID */
 .city-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -146,7 +152,6 @@ button:disabled {
   margin: 2rem 0 1.5rem 0;
 }
 
-/* CARD */
 .city-card {
   background: #ffffff;
   border-radius: 18px;
@@ -160,7 +165,6 @@ button:disabled {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-/* COLLAPSE */
 .city-card.collapsed .city-card-content {
   display: none;
 }
@@ -196,7 +200,6 @@ button:disabled {
   transform: rotate(180deg);
 }
 
-/* CARD TEXT */
 .city-card p small {
   color: #6b7280;
   font-size: 1rem;
