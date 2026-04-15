@@ -1162,34 +1162,45 @@ function convertHourLabel(label) {
   return num;
 }
 
-function convertETToCityHourLabel(etHour, cityTimezone) {
-  const etNow = getETNow();
-  const etMarker = new Date(etNow.getTime());
-
-  const hourPart = Math.floor(etHour);
-  const minutePart = Number.isInteger(etHour) ? 0 : 30;
-  etMarker.setUTCHours(hourPart, minutePart, 0, 0);
-
-  const label = new Intl.DateTimeFormat("en-US", {
-    timeZone: cityTimezone,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true
-  }).format(etMarker);
-
-  return label.replace(":00", "");
+function getTimeZoneOffsetMs(timeZone, at = new Date()) {
+  return getTzDate(timeZone, at).getTime() - at.getTime();    // return (fake UTC from local tz time) - (actual time)
 }
 
-function updateHourlyButton() {
-  const btn = document.getElementById('hourlySaveBtn');
-  if (!btn) return;
+function normalizeTimezone(tz) {
+  const val = String(tz || "UTC").trim();
+  return val || "UTC";
+}
 
-  if (!selectedHour) {
-    btn.disabled = true;
-    btn.textContent = "Select an Hour";
-  } else {
-    btn.disabled = false;
-    btn.textContent = `Save ${selectedHour} Forecasts`;
+function convertETToCityHourLabel(etHour, cityTimezone) {
+  const hourPart = Math.floor(etHour);
+  const minutePart = Number.isInteger(etHour) ? 0 : 30;
+
+  const etMarker = new Date(getETNow().getTime());    // ET wall-time anchor from existing fake UTC date
+  etMarker.setUTCHours(hourPart, minutePart, 0, 0);
+
+  const etOffsetMs = getTimeZoneOffsetMs("America/New_York", new Date());      // convert ET wall-time to actual UTC instant
+  const instantForCity = new Date(etMarker.getTime() - etOffsetMs);
+
+  const tz = normalizeTimezone(cityTimezone);
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    })
+      .format(instantForCity)
+      .replace(":00", "");
+  } catch (err) {
+    console.warn(`Invalid timezone "${tz}", falling back to UTC`, err);
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    })
+      .format(instantForCity)
+      .replace(":00", "");
   }
 }
 
