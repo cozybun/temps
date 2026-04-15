@@ -847,6 +847,28 @@ function getHourlyGameDateMeta() {
   };
 }
 
+function updateHourlyButton() {
+  const btn =
+    document.getElementById("saveHourlyForecastBtn") ||
+    document.getElementById("saveHourlyBtn") ||
+    document.querySelector("button[data-hourly-save], button#saveHourlyForecast");
+
+  if (!btn) return;
+
+  const anySelected =
+    document.querySelector(".hour-option.selected") !== null ||
+    document.querySelector("[data-hour-index].selected") !== null ||
+    document.querySelector("#hourSelector .selected") !== null;
+
+  if (anySelected) {
+    btn.textContent = "Save Hourly Forecasts";
+    btn.disabled = false;
+  } else {
+    btn.textContent = "Choose an Hour";
+    btn.disabled = true;
+  }
+}
+
 function updateHourlyCurrentDate() {
   const el = document.getElementById('currentHourlyDate');
   if (!el) return getHourlyGameDateMeta().gameDate;
@@ -1080,10 +1102,10 @@ function buildHourSelector() {
     box.textContent = label;
 
     box.addEventListener('click', () => {
-      document.querySelectorAll('.hour-box')
-        .forEach(b => b.classList.remove('active'));
+      container.querySelectorAll('.hour-box')
+        .forEach(b => b.classList.remove('selected'));    // clear prior selection
 
-      box.classList.add('active');
+      box.classList.add('selected');    // mark current selection
       selectedHour = label;
 
       buildHourlyGrid();
@@ -1092,6 +1114,8 @@ function buildHourSelector() {
 
     container.appendChild(box);
   });
+
+  updateHourlyButton();      // initialize button state on first render
 }
 
 async function buildHourlyGrid() {
