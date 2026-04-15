@@ -424,49 +424,66 @@ async function upsertWithSessionRecovery({
   retries = 2,
   allowAnonymous = false
 }) {
-  let payload = rows.map((r) => ({ ...r, user_id: userId }));
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { data: [], error: null };
+  }
+
+  const baseRows = rows.map((r) => {    // lways inject user_id only from active Supabase session or skip if allowAnonymous
+    const { user_id, ...rest } = r;    // strip any previous user_id
+    return rest;
+  });
+
+  let activeUserId = null;
 
   for (let attempt = 0; attempt < retries; attempt++) {
     const session = await ensureSession(attempt > 0, { allowAnonymous });
 
     const recoveryState = popAuthRecoveryState();
     if (recoveryState?.needsReauth) {
-      userId = null;
-      return { data: null, error: new Error(recoveryState.message) };
+      if (!allowAnonymous) userId = null;
+      return { data: null, error: new Error(recoveryState.message || "Reauthentication required.") };
     }
 
-    const activeUserId = session?.user?.id || userId;
-    if (!activeUserId) {
+    activeUserId = session?.user?.id;
+
+    if (!allowAnonymous && !activeUserId) {
       return { data: null, error: new Error("No active user session.") };
     }
 
-    const rowsWithUser = payload.map((r) => ({ ...r, user_id: activeUserId }));
+    if (!allowAnonymous) {
+      userId = activeUserId;    // keep global cache in sync
+    }
+
+    const rowsWithUser = allowAnonymous
+      ? baseRows
+      : baseRows.map((r) => ({ ...r, user_id: activeUserId }));
 
     const { data, error } = await client
       .from(table)
       .upsert(rowsWithUser, { onConflict })
       .select();
 
-    if (!error) return { data, error: null, userId: activeUserId }
+    if (!error) {
+      return { data, error: null, userId: activeUserId };
+    }
 
-    if (error.code !== "23503" || attempt >= retries - 1) {
+    if (error.code !== "23503" || attempt >= retries - 1) {    // retry only for FK/session-related mismatch
       return { data: null, error };
     }
 
-    const recovered = await ensureSession(true, { allowAnonymous });
+    const recoveredSession = await ensureSession(true, { allowAnonymous });
     const recoveryOnRetry = popAuthRecoveryState();
     if (recoveryOnRetry?.needsReauth) {
-      userId = null;
-      return { data: null, error: new Error(recoveryOnRetry.message) };
+      if (!allowAnonymous) userId = null;
+      return { data: null, error: new Error(recoveryOnRetry.message || "Reauthentication required.") };
     }
 
-    const recoveredUserId = recovered?.user?.id || userId;
-    if (!recoveredUserId) {
+    const recoveredUserId = recoveredSession?.user?.id;
+    if (!allowAnonymous && !recoveredUserId) {
       return { data: null, error: new Error("Session recovery failed. Please sign in again.") };
     }
 
-    if (recoveredUserId !== activeUserId) {
-      payload = rows.map((r) => ({ ...r, user_id: recoveredUserId }));
+    if (!allowAnonymous) {    // continue loop with recovered session, next attempt will re-inject new user_id
       userId = recoveredUserId;
     }
   }
