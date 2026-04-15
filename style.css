@@ -93,11 +93,30 @@ button:disabled {
   margin-bottom: 0;
 }
 
+#hourlySaveBtn,
+#hourlyScoreBtn {
+  padding: 1rem 2.2rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  line-height: 1.2;
+  height: auto;
+  min-height: 0;
+  width: auto;
+  min-width: 0;
+}
+
 #hourlySaveBtn {
-  font-size: 1.35rem !important;
-  padding: 1rem 2.2rem !important;
-  border-radius: 14px !important;
-  font-weight: 700 !important;
+  background: #0096FF;
+}
+
+#hourlyScoreBtn {
+  background: #32CD32;
+}
+
+#hourlyScoreBtn:hover {
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
 }
 
 /* GRID */
@@ -438,4 +457,22 @@ button:disabled {
 .hour-selector + p {
   margin: 1rem auto 1rem !important;
   text-align: center;
+}
+
+.latest-temps-link {
+  margin-top: 0.65rem;
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+.latest-temps-link a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.latest-temps-link a:hover {
+  text-decoration: underline;
+  opacity: 1;
 }
