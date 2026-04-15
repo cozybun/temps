@@ -1281,8 +1281,9 @@ async function handleDailySubmit(e) {
   });
 
   inputs.forEach((input) => {
+    if (input.disabled) return;
     const raw = input.value.trim();
-    if (raw === "") return; // allows 0; ignore empty
+    if (raw === "") return;    // allow 0, ignore empty
     hasAnyInput = true;
 
     const cityId = Number(input.dataset.cityId);
