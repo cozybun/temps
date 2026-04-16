@@ -121,7 +121,7 @@ async function claimBackupUsername(uid, rawUsername) {
   const raw = String(rawUsername || "").trim();
   if (!raw) return { ok: false, message: "Username cannot be empty" };
 
-  const normalized = raw.toLowerCase().trim();
+  const normalized = raw.toLowerCase();
   if (!/^[a-zA-Z0-9]{3,16}$/.test(normalized)) {
     return {
       ok: false,
@@ -129,6 +129,7 @@ async function claimBackupUsername(uid, rawUsername) {
     };
   }
 
+  // save username in public.users table
   const { data, error } = await client.rpc("claim_public_username", {
     p_user_id: uid,
     p_desired_username: normalized
@@ -137,7 +138,43 @@ async function claimBackupUsername(uid, rawUsername) {
   if (error) return { ok: false, message: `Username save failed: ${error.message}` };
   if (data === null || data === false) return { ok: false, message: "That username is already taken" };
 
-  return { ok: true, value: data };
+  try {    // update auth user metadata for display name / auth.users metadata
+    const { data: currentSession } = await client.auth.getUser();
+    if (!currentSession?.user) {
+      return {
+        ok: false,
+        message: "Logged-in user not found; username saved, but display metadata not updated"
+      };
+    }
+
+    if (currentSession.user.id !== uid) {
+      return {
+        ok: false,
+        message: "Username saved, but auth metadata update skipped (UID mismatch)"
+      };
+    }
+
+    const { error: authErr } = await client.auth.updateUser({
+      data: {
+        username: normalized,
+        display_name: normalized
+      }
+    });
+
+    if (authErr) {
+      return {
+        ok: false,
+        message: `Username saved, but Display Name update failed: ${authErr.message}`
+      };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: `Username saved, but metadata sync failed: ${String(e?.message || e)}`
+    };
+  }
+
+  return { ok: true, value: normalized };
 }
 
 // Prompt user to save email & username 
