@@ -1999,17 +1999,28 @@ document.addEventListener('DOMContentLoaded', async () => {  // main init
   }
 
   await loadCities();
-
   document.addEventListener("click", (e) => {
     const header = e.target.closest(".city-card-header");
     if (!header) return;
-
+  
     const dailyGrid = document.getElementById("dailyGrid");
-    if (!dailyGrid) return;  // no daily grid on this page
-    if (!dailyGrid.contains(header)) return;  // only daily grid headers
-
-    setAllCardsExpanded(!allCardsExpanded);
-  });
+    const inDailyGrid = !!dailyGrid && dailyGrid.contains(header);
+  
+    console.log("[card click]", {
+      tag: e.target.tagName,
+      headerClass: header.className,
+      hasDailyGrid: !!dailyGrid,
+      inDailyGrid
+    });
+  
+    if (dailyGrid && !inDailyGrid) return; // keep scoping
+  
+    if (typeof setAllCardsExpanded === "function") {
+      setAllCardsExpanded(!allCardsExpanded);
+    } else {
+      console.error("setAllCardsExpanded is not a function");
+    }
+  }, true);  // capture phase to avoid being blocked by other listeners
 
   if (document.getElementById('hourSelector')) {
     buildHourSelector();
