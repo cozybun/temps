@@ -1167,9 +1167,6 @@ function buildHourSelector() {
   updateHourlyButton();
 }
 
-  updateHourlyButton();      // initialize button state on first render
-}
-
 async function buildHourlyGrid() {
   const grid = document.getElementById("hourlyGrid");
   if (!grid || !selectedHour) return;
