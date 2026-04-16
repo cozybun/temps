@@ -1123,7 +1123,7 @@ async function buildDailyGrid() {
       (g) => Number(g.city_id) === Number(city.id) && String(g.date) === targetDate
     ) || {};
 
-    const hasPrevGuess = prevGuess.high !== undefined || prevGuess.low !== undefined;
+    const hasSavedForecast = prevGuess.high !== undefined || prevGuess.low !== undefined;
 
     const localNow = getTzDate(city.timezone || "UTC");
     const cutoff = new Date(localNow.getTime());
