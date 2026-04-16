@@ -15,8 +15,7 @@ const BACKUP_EMAIL_STREAK = 7;
 const BACKUP_EMAIL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const HOURLY_LABELS = [
-  // "Noon",
-  "1PM",
+  "1PM",    // "Noon",
   "2PM",
   "3PM",
   "4PM",
@@ -26,6 +25,34 @@ const HOURLY_LABELS = [
   "8PM"
 ];
 const HOURLY_GAME_SWITCH_HOUR_ET = 20; // 19
+
+const MESOWEST_STATIONS_BY_CITY = {
+  "Los Angeles": "KLAX",
+  "Houston": "KHOU",
+  "New York City": "KNYC",
+};
+
+function normalizeCityKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Helper to return full obs URL for a city object
+function getObsUrl(cityObj) {
+  const directStation =
+    cityObj?.mesowestStation || cityObj?.station || cityObj?.stn;
+
+  const stationCode =
+    directStation || MESOWEST_STATIONS_BY_CITY[normalizeCityKey(cityObj?.name || cityObj?.city || cityObj?.label)];
+
+  if (!stationCode) return '';
+
+  return `https://mesowest.utah.edu/cgi-bin/droman/meso_base_dyn.cgi?stn=${encodeURIComponent(stationCode)}`;
+}
+
 function setStatus(html, append = false) {
   const status = document.getElementById('status');
   if (!status) return;
@@ -1026,17 +1053,44 @@ async function buildDailyGrid() {
   const forecastDay = forecastDaySelect.value || "today";
   const forecastDate = getDailyForecastDateISO(forecastDay);
 
+  const showYesterday = forecastDay === "today";
   let actuals = [];
   let guesses = [];
 
-  if (userId) {
-    try {
-      const result = await loadForecastData({ date: forecastDate, userIdValue: userId, includeActuals: true, table: "daily_forecasts" });
-      actuals = result?.actuals || [];
-      guesses = result?.guesses || [];
-    } catch (err) {
-      console.error("buildDailyGrid data load failed:", err);
+  const cityYesterdayById = new Map();
+  if (showYesterday) {
+    cities.forEach((city) => {
+      const tz = city.timezone || "UTC";
+      const y = getCityLocalDateISO(tz, -1);
+      cityYesterdayById.set(Number(city.id), y);
+    });
+  }
+
+  const yesterdayDateList = [...new Set(Array.from(cityYesterdayById.values()))];
+
+  try {
+    if (showYesterday && yesterdayDateList.length > 0) {    // load yesterday actuals publicly, no user required
+      const { data: yRows, error: yErr } = await client
+        .from("daily_actuals")
+        .select("city_id,date,high,low")
+        .in("date", yesterdayDateList);
+
+      if (yErr) throw yErr;
+      actuals = yRows || [];
     }
+
+    if (userId) {    // keep forecasts user-scoped
+      const result = await loadForecastData({
+        date: forecastDate,
+        userIdValue: userId,
+        includeActuals: false,
+        table: "daily_forecasts"
+      });
+
+      guesses = result?.guesses || [];
+    }
+  } catch (err) {
+    console.error("buildDailyGrid data load failed:", err);
   }
 
   grid.innerHTML = "";
@@ -1052,19 +1106,18 @@ async function buildDailyGrid() {
   cities.forEach((city) => {
     const stationDisplay = getStationDisplay(city);
     const cityTz = city.timezone || "UTC";
-    const cityYesterday = getCityLocalDateISO(cityTz, -1);
-    const showYesterday = forecastDay === "today";
     const targetDate = forecastDate;
 
-    const cityActuals = (Array.isArray(actuals) ? actuals : [])
-      .filter((a) =>
-        Number(a?.city_id) === Number(city.id) &&
-        String(a.date) <= cityYesterday
-      )
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const cityYesterday = cityYesterdayById.get(Number(city.id)) || getCityLocalDateISO(cityTz, -1);
+    const cityYesterdayActual = showYesterday
+      ? actuals.find((a) =>
+          Number(a?.city_id) === Number(city.id) &&
+          String(a.date) === String(cityYesterday)
+        )
+      : null;
 
-    const yesterdayHigh = showYesterday && cityActuals.length ? cityActuals[0].high : " ";
-    const yesterdayLow = showYesterday && cityActuals.length ? cityActuals[0].low : " ";
+    const yesterdayHigh = showYesterday && cityYesterdayActual ? cityYesterdayActual.high : " ";
+    const yesterdayLow = showYesterday && cityYesterdayActual ? cityYesterdayActual.low : " ";
 
     const prevGuess = (Array.isArray(guesses) ? guesses : []).find(
       (g) => Number(g.city_id) === Number(city.id) && String(g.date) === targetDate
@@ -1172,7 +1225,12 @@ async function buildHourlyGrid() {
   if (!grid || !selectedHour) return;
 
   const hourlyState = getHourlyGameDateMeta();
-  const { guesses: hourlyGuesses = [] } = await loadForecastData({ date: hourlyState.gameDate, userIdValue: userId, includeActuals: false, table: "hourly_forecasts" });
+  const { guesses: hourlyGuesses = [] } = await loadForecastData({
+    date: hourlyState.gameDate,
+    userIdValue: userId,
+    includeActuals: false,
+    table: "hourly_forecasts",
+  });
 
   const etNow = hourlyState.etNow;
   const useTomorrow = hourlyState.useTomorrow;
@@ -1183,6 +1241,7 @@ async function buildHourlyGrid() {
   const sixHrHourNum = showSixHrHigh ? hourNum + 0.5 : null;
 
   grid.innerHTML = "";
+
   cities.forEach((city) => {
     const localLabel = convertETToCityHourLabel(hourNum, city.timezone || "UTC");
     const isPastCutoff = isPastCutoffForHour(etNow, useTomorrow, hourNum);
@@ -1204,9 +1263,15 @@ async function buildHourlyGrid() {
           )
         : null;
 
+    const latestTempsUrl = getObsUrl(city);
+    const latestTempsHtml = latestTempsUrl
+      ? `Latest temps: <a href="${latestTempsUrl}" target="_blank" rel="noopener noreferrer">View observations</a>`
+      : `Latest temps: N/A`;
+
     const card = document.createElement("div");
     card.className = "city-card expanded";
     card.dataset.cityId = city.id;
+
     card.innerHTML = `
       <div class="city-card-header">${city.name}</div>
       <div class="city-card-content">
@@ -1237,11 +1302,14 @@ async function buildHourlyGrid() {
         ` : ""}
 
         ${isPastCutoff ? '<small style="color:#e74c3c;">Past cutoff</small>' : ""}
+        <small class="latest-temps-caption">${latestTempsHtml}</small>
       </div>
     `;
 
     grid.appendChild(card);
   });
+
+  updateHourlyButton();
 }
 
 function convertHourLabel(label) {
@@ -1357,7 +1425,7 @@ async function handleDailySubmit(e) {
     if (forecastDay === "today") {
       const localNow = getTzDate(city.timezone || "UTC");
       const cutoff = new Date(localNow.getTime());
-      cutoff.setHours(12, 0, 0, 0); // local noon, not UTC noon
+      cutoff.setUTCHours(12, 0, 0, 0); // local noon, not UTC noon
       if (localNow >= cutoff) {
         isLocked = true;
       }
