@@ -70,6 +70,26 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
     }
+ 
+    #hourSelector [data-hour] {
+      transition: all 0.2s ease;
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e3a8a;
+      border-radius: 10px;
+      padding: 0.5rem 0.85rem;
+      margin: 0.25rem;
+      cursor: pointer;
+    }
+    
+    
+    #hourSelector [data-hour].hour-selected {
+      background: #1d4ed8 !important;
+      border-color: #1e40af !important;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 0 0 2px #1e3a8a;
+    }
   </style>
 </head>
 <body>
