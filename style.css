@@ -478,10 +478,15 @@ button:disabled {
   margin-bottom: 0.3rem;
 }
 
-.hourly-cutoff {
+.hourly-cutoff, .latest-temps-link {
+  font-size: 1rem;   /* same size */
+  font-weight: 600;
+  line-height: 1.4;
   text-align: center;
-  font-size: 1rem;
-  margin: 0.6rem 0 0.2rem;
+}
+
+.latest-temps-link {
+  margin-top: 0.6rem;
 }
 
 #currentHourlyDate {
@@ -501,12 +506,6 @@ button:disabled {
 .hour-selector + p {
   margin: 1rem auto 1rem !important;
   text-align: center;
-}
-
-.latest-temps-link {
-  margin-top: 0.65rem;
-  text-align: center;
-  font-size: 0.92rem;
 }
 
 .latest-temps-link a {
