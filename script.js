@@ -6,7 +6,6 @@ if (!window.__supabase_client) {
 const client = window.__supabase_client;
 
 let cities = [];
-let hasSavedForecast = false;
 let selectedHour = null;
 let hourlyCurrentDateKey = '';
 let isDailyPage = false;
@@ -1520,12 +1519,11 @@ document.addEventListener('click', (e) => {
   const header = e.target.closest('.city-card-header');
   if (!header) return;
 
-  if (!hasSavedForecast) {
-    document.querySelectorAll('.city-card').forEach(card => {
-      card.classList.remove('collapsed');
-      card.classList.add('expanded');
-    });
-  }
+  const card = header.closest('.city-card');
+  if (!card) return;
+
+  card.classList.toggle('collapsed');
+  card.classList.toggle('expanded');
 });
 
 // Daily save handler
@@ -1702,8 +1700,6 @@ async function handleDailySubmit(e) {
 
   const finalUserId = result.userId || activeUserId;
   if (finalUserId) userId = finalUserId;
-
-  hasSavedForecast = true;
 
   const lockedMsg =
     lockedCityNames.size > 0
