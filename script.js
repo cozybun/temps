@@ -1374,7 +1374,7 @@ function buildHourSelector() {
     container.appendChild(box);
   });
 
-  setSelectedHourUI(selectedHour);    // initial sync
+  setSelectedHourUI(selectedHour);  // initial sync
   updateHourlyButton();
 }
 
@@ -1477,7 +1477,7 @@ function convertHourLabel(label) {
 }
 
 function getTimeZoneOffsetMs(timeZone, at = new Date()) {
-  return getTzDate(timeZone, at).getTime() - at.getTime();    // return (fake UTC from local tz time) - (actual time)
+  return getTzDate(timeZone, at).getTime() - at.getTime();  // return (fake UTC from local tz time) - (actual time)
 }
 
 function normalizeTimezone(tz) {
@@ -1489,10 +1489,10 @@ function convertETToCityHourLabel(etHour, cityTimezone) {
   const hourPart = Math.floor(etHour);
   const minutePart = Number.isInteger(etHour) ? 0 : 30;
 
-  const etMarker = new Date(getETNow().getTime());    // ET wall-time anchor from existing fake UTC date
+  const etMarker = new Date(getETNow().getTime());  // ET wall-time anchor from existing fake UTC date
   etMarker.setUTCHours(hourPart, minutePart, 0, 0);
 
-  const etOffsetMs = getTimeZoneOffsetMs("America/New_York", new Date());      // convert ET wall-time to actual UTC instant
+  const etOffsetMs = getTimeZoneOffsetMs("America/New_York", new Date());  // convert ET wall-time to actual UTC instant
   const instantForCity = new Date(etMarker.getTime() - etOffsetMs);
 
   const tz = normalizeTimezone(cityTimezone);
@@ -1519,8 +1519,7 @@ function convertETToCityHourLabel(etHour, cityTimezone) {
 }
 
 let allCardsExpanded = false;
-
-function setAllCardsExpanded(expanded) {    // apply card expandion globally
+function setAllCardsExpanded(expanded) {  // apply card expansion globally
   allCardsExpanded = expanded;
   document.querySelectorAll('.city-card').forEach(card => {
     card.classList.toggle('expanded', expanded);
@@ -1567,7 +1566,7 @@ async function handleDailySubmit(e) {
   inputs.forEach((input) => {
     if (input.disabled) return;
     const raw = input.value.trim();
-    if (raw === "") return;    // allow 0, ignore empty
+    if (raw === "") return;  // allow 0, ignore empty
     hasAnyInput = true;
 
     const cityId = Number(input.dataset.cityId);
@@ -1584,12 +1583,11 @@ async function handleDailySubmit(e) {
     const city = cities.find((c) => c.id === cityId);
     if (!city) return;
 
-    // City-level cutoff check for today only
-    let isLocked = false;
+    let isLocked = false;  // city-level cutoff check for today
     if (forecastDay === "today") {
       const localNow = getTzDate(city.timezone || "UTC");
       const cutoff = new Date(localNow.getTime());
-      cutoff.setUTCHours(12, 0, 0, 0); // local noon, not UTC noon
+      cutoff.setUTCHours(12, 0, 0, 0);  // local noon, not UTC noon
       if (localNow >= cutoff) {
         isLocked = true;
       }
@@ -1597,7 +1595,7 @@ async function handleDailySubmit(e) {
 
     if (isLocked) {
       lockedCityNames.add(getCityName(city, cityId));
-      return; // Skip locked city; still allow other open cities to save
+      return;  // skip locked city, still allow input for open cities
     }
 
     const dateValue = forecastDate;
@@ -1633,9 +1631,8 @@ async function handleDailySubmit(e) {
   }
 
   if (lockedCityNames.size > 0 && !hasAnyOpenInput) {
-    const lockedList = [...lockedCityNames].join(", ");
     setStatus(
-      `<span style="color:red;"> Cutoff passed for: ${lockedList}. No open-city forecasts to save. </span>`
+      `<span style="color:red;"> Cutoff passed for all cities today </span>`
     );
     return;
   }
@@ -1645,7 +1642,7 @@ async function handleDailySubmit(e) {
     return;
   }
 
-  const lowOnlyCities = []; // enforce high requirement
+  const lowOnlyCities = [];  // enforce high requirement
   rowsByCity.forEach((row) => {
     if (row._hasLow && !row._hasHigh) {
       const lowInput = document.querySelector(`.daily-low[data-city-id="${row.city_id}"]`);
@@ -1672,7 +1669,7 @@ async function handleDailySubmit(e) {
     return;
   }
 
-  const preSaveSession = await ensureSessionForDailySave(); // single explicit creation point
+  const preSaveSession = await ensureSessionForDailySave();  // single explicit creation point
   if (!preSaveSession?.user?.id) {
     setStatus('<span style="color:red;"> No active session. Please try again. </span>');
     return;
@@ -1680,7 +1677,7 @@ async function handleDailySubmit(e) {
   const activeUserId = preSaveSession.user.id;
   userId = activeUserId;
 
-  let predictedStreak = null; // predict streak increment before upsert using current DB state
+  let predictedStreak = null;  // predict streak increment before upsert using current DB state
   for (const forecastDate of [...dateKeys]) {
     const incrementCheck = await checkIncrementDailyStreak(payload, forecastDate, activeUserId);
 
