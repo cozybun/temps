@@ -11,6 +11,7 @@ let selectedHour = null;
 let hourlyCurrentDateKey = '';
 let isDailyPage = false;
 let isHourlyPage = false;
+let lastPtDateForUi = getPtTodayYmd();
 const BACKUP_EMAIL_STREAK = 7;
 const BACKUP_EMAIL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -790,6 +791,121 @@ const TIMEZONE_ET = "America/New_York";
 const TIMEZONE_PT = "America/Los_Angeles";
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 
+// Helper to auto switch date selector to tomorrow after last city cutoff time
+function applyNoonAutoSelect() {
+  const forecastDaySelect = document.getElementById("forecastDay");
+  if (!forecastDaySelect) return false;
+
+  const todayPt = getPtTodayYmd();
+  const wasLockedForDay = forecastDaySelect.dataset.userSet === "1";
+  const lockedDate = forecastDaySelect.dataset.userSetDate;
+
+  const dayChanged = todayPt !== lastPtDateForUi;
+  lastPtDateForUi = todayPt;
+
+  if (wasLockedForDay && lockedDate !== todayPt) {    // reset user today selection lock when PT date advances
+    delete forecastDaySelect.dataset.userSet;
+    delete forecastDaySelect.dataset.userSetDate;
+  }
+
+  if (forecastDaySelect.dataset.userSet === "1") {
+    forecastDaySelect.value = "today";
+    return dayChanged;
+  }
+
+  const desired = shouldAutoUseTomorrowPT() ? "tomorrow" : "today";
+  const changed = forecastDaySelect.value !== desired;
+
+  if (changed) {
+    forecastDaySelect.value = desired;
+  }
+
+  return changed || dayChanged;
+}
+
+function refreshForecastDayOptions() {
+  const forecastDaySelect = document.getElementById("forecastDay");
+  if (!forecastDaySelect) return;
+
+  const todayOption = forecastDaySelect.querySelector('option[value="today"]');
+  const tomorrowOption = forecastDaySelect.querySelector('option[value="tomorrow"]');
+  if (!todayOption || !tomorrowOption) return;
+
+  const todayISO = getDailyForecastDateISO("today");
+  const tomorrowISO = getDailyForecastDateISO("tomorrow");
+
+  todayOption.textContent = `Today (${formatDisplayDate(todayISO)})`;
+  tomorrowOption.textContent = `Tomorrow (${formatDisplayDate(tomorrowISO)})`;
+}
+
+// Return today's wall-date in PT as YYYY-MM-DD, no parsing/local timezone drift
+function getPtTodayYmd(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE_PT,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(date)
+    .filter((p) => p.type !== "literal")
+    .reduce((acc, p) => {
+      acc[p.type] = p.value;
+      return acc;
+    }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+// Add whole days to a YYYY-MM-DD and return YYYY-MM-DD
+function addDaysYmd(ymd, delta = 0) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  utc.setUTCDate(utc.getUTCDate() + delta);
+  return utc.toISOString().slice(0, 10);
+}
+
+// Determine noon PT autoswitch for date selector default
+function shouldAutoUseTomorrowPT() {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: TIMEZONE_PT,
+      hour: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(new Date())
+      .find((p) => p.type === "hour").value
+  );
+  return hour >= 12;
+}
+
+function getDailyForecastDateISO(dayChoice = "today") {
+  const today = getPtTodayYmd(new Date());
+  return addDaysYmd(today, dayChoice === "tomorrow" ? 1 : 0);
+}
+
+function formatDisplayDate(ymd) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const asDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));    // use a safe UTC noon for locale formatting
+  return asDate.toLocaleDateString("en-US", {
+    timeZone: TIMEZONE_PT,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// Update current date label on daily page
+function updateCurrentDate() {
+  const dateDisplay = document.getElementById("currentDate");
+  const forecastDaySelect = document.getElementById("forecastDay");
+  if (!dateDisplay || !forecastDaySelect) return;
+
+  refreshForecastDayOptions();
+  const selected = forecastDaySelect.value || (shouldAutoUseTomorrowPT() ? "tomorrow" : "today");
+  const iso = getDailyForecastDateISO(selected);
+  dateDisplay.textContent = formatDisplayDate(iso);
+}
+
 function getDatePartsInTZ(timeZone, date = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
@@ -841,16 +957,6 @@ function getCityLocalDateISO(tz, offsetDays = 0) {
   const d = getTzDate(tz);
   d.setUTCDate(d.getUTCDate() + offsetDays);
   return toYMD(d);
-}
-
-function getDailyForecastDateISO(forecastDay = "today") {
-  const gameDate = getPTNow();
-
-  if (forecastDay === "tomorrow") {
-    gameDate.setUTCDate(gameDate.getUTCDate() + 1);
-  }
-
-  return toYMD(gameDate);
 }
 
 function getETNow() {
@@ -935,7 +1041,7 @@ function updateHourlyCurrentDate() {
   if (!el) return getHourlyGameDateMeta().gameDate;
 
   const state = getHourlyGameDateMeta();
-  el.textContent = `Forecast date (ET): ${state.gameDateLabel}`;
+  el.textContent = `Forecast date (ET):${state.gameDateLabel}`;
   return state.gameDate;
 }
 
@@ -977,29 +1083,6 @@ async function loadForecastData({
   ]);
 
   return { actuals, guesses };
-}
-
-// Update current date label on daily page
-function updateCurrentDate() {
-  const dateDisplay = document.getElementById('currentDate');
-  const forecastDaySelect = document.getElementById('forecastDay');
-  if (!dateDisplay || !forecastDaySelect) return;
-
-  const ptNow = getPTNow();
-  const ptCutoff = new Date(ptNow.getTime());
-  ptCutoff.setUTCHours(12, 0, 0, 0);    // PT noon cutoff
-
-  const useTomorrow = ptNow >= ptCutoff;
-  const selectedDate = useTomorrow
-    ? (() => {
-        const d = new Date(ptNow.getTime());
-        d.setUTCDate(d.getUTCDate() + 1);
-        return d;
-      })()
-    : ptNow;
-
-  forecastDaySelect.value = useTomorrow ? "tomorrow" : "today";
-  dateDisplay.textContent = `Forecast date (PT): ${formatMonthDayInTZ(selectedDate, "America/Los_Angeles")}`;
 }
 
 async function loadCities() {
@@ -1766,22 +1849,31 @@ function initRevealBtn() {
 }
 
 function initBindings() {
-  const forecastDaySelect = document.getElementById('forecastDay');
+  const forecastDaySelect = document.getElementById("forecastDay");
   if (forecastDaySelect) {
-    forecastDaySelect.addEventListener('change', async () => {
+    forecastDaySelect.addEventListener("change", async () => {
+      const value = forecastDaySelect.value;
+      if (value === "today") {
+        forecastDaySelect.dataset.userSet = "1";
+        forecastDaySelect.dataset.userSetDate = getPtTodayYmd();
+      } else {
+        delete forecastDaySelect.dataset.userSet;
+        delete forecastDaySelect.dataset.userSetDate;
+      }
+
       updateCurrentDate();
       await buildDailyGrid();
     });
   }
 
-  const dailyForm = document.getElementById('tempsForm');
+  const dailyForm = document.getElementById("tempsForm");
   if (dailyForm) {
-    dailyForm.addEventListener('submit', handleDailySubmit);
+    dailyForm.addEventListener("submit", handleDailySubmit);
   }
 
-  const hourlyForm = document.getElementById('hourlyForm');
+  const hourlyForm = document.getElementById("hourlyForm");
   if (hourlyForm) {
-    hourlyForm.addEventListener('submit', handleHourlySubmit);
+    hourlyForm.addEventListener("submit", handleHourlySubmit);
   }
 
   initRevealBtn();
@@ -1820,10 +1912,22 @@ function initDailyHelpModal() {
   modal.classList.add("hidden");
 }
 
+// Keep daily forecast date UI synchronized with PT auto-selection rules and return whether date UI changed
+function syncDailyDateUI(force = false) {
+  const didDateUIChange = force || applyNoonAutoSelect();
+  if (!isDailyPage) return didDateUIChange;
+
+  refreshForecastDayOptions();
+  updateCurrentDate();
+  return didDateUIChange;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await handleAuthCallbackFromUrl();
   detectPageMode();
   initBindings();
+  applyNoonAutoSelect();
+  refreshForecastDayOptions();
 
   if (typeof initDailyHelpModal === 'function') {
     initDailyHelpModal();
@@ -1842,7 +1946,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setInterval(async () => {
     if (isDailyPage && (typeof shouldCheckNow === 'function' ? shouldCheckNow() : true)) {
+      applyNoonAutoSelect();
+      syncDailyDateUI(true);
       updateCurrentDate();
+      refreshForecastDayOptions();
       await buildDailyGrid();
     }
 
