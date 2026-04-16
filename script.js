@@ -1124,30 +1124,48 @@ async function buildDailyGrid() {
   });
 }
 
+function setSelectedHourUI(selectedLabel) {
+  const container = document.getElementById('hourSelector');
+  if (!container) return;
+
+  const boxes = container.querySelectorAll('.hour-box');
+  boxes.forEach((box) => {
+    const isMatch = box.dataset.hourLabel === String(selectedLabel);
+    box.classList.toggle('selected', isMatch);
+  });
+}
+
 function buildHourSelector() {
   const container = document.getElementById('hourSelector');
   if (!container) return;
 
   container.innerHTML = '';
+  selectedHour = selectedHour || null;
 
-  HOURLY_LABELS.forEach(label => {
-    const box = document.createElement('div');
+  HOURLY_LABELS.forEach((label) => {
+    const box = document.createElement('button');
+    box.type = 'button';
     box.className = 'hour-box';
+    box.dataset.hourLabel = label;
     box.textContent = label;
 
+    if (selectedHour && selectedHour === label) {    // restore selected look if selector is rebuilt later
+      box.classList.add('selected');
+    }
+
     box.addEventListener('click', () => {
-      container.querySelectorAll('.hour-box')
-        .forEach(b => b.classList.remove('selected'));    // clear prior selection
-
-      box.classList.add('selected');    // mark current selection
       selectedHour = label;
-
+      setSelectedHourUI(label);    // robustly mark selected in deep blue
       buildHourlyGrid();
       updateHourlyButton();
     });
 
     container.appendChild(box);
   });
+
+  setSelectedHourUI(selectedHour);    // initial sync
+  updateHourlyButton();
+}
 
   updateHourlyButton();      // initialize button state on first render
 }
