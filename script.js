@@ -2000,15 +2000,16 @@ document.addEventListener('DOMContentLoaded', async () => {  // main init
 
   await loadCities();
 
-  const dailyGrid = document.getElementById("dailyGrid");
-  if (dailyGrid && !dailyGrid.dataset.cardsToggleBound) {
-    dailyGrid.dataset.cardsToggleBound = "1";
-    dailyGrid.addEventListener("click", (e) => {
-      const header = e.target.closest(".city-card-header");
-      if (!header) return;
-      setAllCardsExpanded(!allCardsExpanded);
-    });
-  }
+  document.addEventListener("click", (e) => {
+    const header = e.target.closest(".city-card-header");
+    if (!header) return;
+
+    const dailyGrid = document.getElementById("dailyGrid");
+    if (!dailyGrid) return;  // no daily grid on this page
+    if (!dailyGrid.contains(header)) return;  // only daily grid headers
+
+    setAllCardsExpanded(!allCardsExpanded);
+  });
 
   if (document.getElementById('hourSelector')) {
     buildHourSelector();
