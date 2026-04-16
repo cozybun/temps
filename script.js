@@ -987,32 +987,19 @@ function updateCurrentDate() {
 
   const ptNow = getPTNow();
   const ptCutoff = new Date(ptNow.getTime());
-  ptCutoff.setUTCHours(12, 0, 0, 0);
+  ptCutoff.setUTCHours(12, 0, 0, 0);    // PT noon cutoff
 
-  const dateKey = toYMD(ptNow);
-  const autoSwitchKey = `temps_auto_switched_${dateKey}`;
+  const useTomorrow = ptNow >= ptCutoff;
+  const selectedDate = useTomorrow
+    ? (() => {
+        const d = new Date(ptNow.getTime());
+        d.setUTCDate(d.getUTCDate() + 1);
+        return d;
+      })()
+    : ptNow;
 
-  if (ptNow < ptCutoff) {    // new day reset, back to today before noon
-    forecastDaySelect.value = "today";
-    try { sessionStorage.removeItem(autoSwitchKey); } catch (_) {}
-  } else {    // after PT cutoff, switch once per day
-    let hasAutoSwitched = false;
-    try {
-      hasAutoSwitched = sessionStorage.getItem(autoSwitchKey);
-    } catch (_) {}
-
-    if (!hasAutoSwitched) {
-      forecastDaySelect.value = "tomorrow";
-      try { sessionStorage.setItem(autoSwitchKey, "true"); } catch (_) {}
-    }
-  }
-
-  const ptToday = formatMonthDayInTZ(ptNow, "America/Los_Angeles");
-  const tomorrow = new Date(ptNow.getTime());
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  const ptTomorrow = formatMonthDayInTZ(tomorrow, "America/Los_Angeles");
-
-  dateDisplay.textContent = forecastDaySelect.value === "today" ? ptToday : ptTomorrow;
+  forecastDaySelect.value = useTomorrow ? "tomorrow" : "today";
+  dateDisplay.textContent = `Forecast date (PT): ${formatMonthDayInTZ(selectedDate, "America/Los_Angeles")}`;
 }
 
 async function loadCities() {
@@ -1048,6 +1035,7 @@ async function buildDailyGrid() {
   const grid = document.getElementById("dailyGrid");
   const forecastDaySelect = document.getElementById("forecastDay");
   if (!grid || !forecastDaySelect) return;
+  updateCurrentDate();
 
   grid.innerHTML = "<p>Loading cities...</p>";
 
@@ -1294,7 +1282,7 @@ async function buildHourlyGrid() {
 
     const latestTempsUrl = getObsUrl(city);
     const latestTempsHtml = latestTempsUrl
-      ? `Latest temps: <a href="${latestTempsUrl}" target="_blank"`
+      ? `Latest temps: <a href="${latestTempsUrl}" target="_blank" rel="noopener noreferrer">Latest temps</a>`
       : `Latest temps: N/A`;
 
     const card = document.createElement("div");
