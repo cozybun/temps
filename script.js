@@ -1048,12 +1048,13 @@ async function buildDailyGrid() {
   const grid = document.getElementById("dailyGrid");
   const forecastDaySelect = document.getElementById("forecastDay");
   if (!grid || !forecastDaySelect) return;
+
   grid.innerHTML = "<p>Loading cities...</p>";
 
   const forecastDay = forecastDaySelect.value || "today";
   const forecastDate = getDailyForecastDateISO(forecastDay);
-
   const showYesterday = forecastDay === "today";
+
   let actuals = [];
   let guesses = [];
 
@@ -1068,64 +1069,88 @@ async function buildDailyGrid() {
 
   const yesterdayDateList = [...new Set(Array.from(cityYesterdayById.values()))];
 
-  try {
-    if (showYesterday && yesterdayDateList.length > 0) {    // load yesterday actuals publicly, no user required
+  if (showYesterday && yesterdayDateList.length > 0) {    // yesterday actuals are public, no user requied; if missing, show Data Pending
+    try {
       const { data: yRows, error: yErr } = await client
         .from("daily_actuals")
         .select("city_id,date,high,low")
         .in("date", yesterdayDateList);
 
-      if (yErr) throw yErr;
-      actuals = yRows || [];
+      if (yErr) {
+        console.warn("Could not load yesterday actuals:", yErr);
+      } else {
+        actuals = yRows || [];
+      }
+    } catch (yErr) {
+      console.warn("Yesterday actuals fetch failed:", yErr);
+      actuals = [];
     }
+  }
 
-    if (userId) {    // keep forecasts user-scoped
+  if (userId) {    // keep forecasts user-scoped
+    try {
       const result = await loadForecastData({
         date: forecastDate,
         userIdValue: userId,
         includeActuals: false,
-        table: "daily_forecasts"
+        table: "daily_forecasts",
       });
-
       guesses = result?.guesses || [];
+    } catch (fErr) {
+      console.warn("Forecasts load failed:", fErr);
+      guesses = [];
     }
-  } catch (err) {
-    console.error("buildDailyGrid data load failed:", err);
   }
 
   grid.innerHTML = "";
   if (!Array.isArray(cities) || cities.length === 0) {
-    grid.innerHTML = "<p>No cities found.</p>";
+    grid.innerHTML = "<p>No cities found</p>";
     return;
+  }
+
+  const keyFor = (cityId, date) => `${Number(cityId)}_${String(date)}`;
+
+  const actualsByCityDate = new Map();
+  for (const row of actuals || []) {
+    actualsByCityDate.set(keyFor(row.city_id, row.date), row);
+  }
+
+  const guessesByCityDate = new Map();
+  for (const g of guesses || []) {
+    guessesByCityDate.set(keyFor(g.city_id, g.date), g);
   }
 
   const ptNow = getPTNow();
   const ptCutoff = new Date(ptNow);
   ptCutoff.setUTCHours(12, 0, 0, 0);
 
-  cities.forEach((city) => {
+  const formatYesterdayValue = (v) =>
+    v === undefined || v === null ? "Data Pending" : `${v}°`;
+
+  for (const city of cities) {
     const stationDisplay = getStationDisplay(city);
     const cityTz = city.timezone || "UTC";
     const targetDate = forecastDate;
 
-    const cityYesterday = cityYesterdayById.get(Number(city.id)) || getCityLocalDateISO(cityTz, -1);
+    const cityYesterday =
+      cityYesterdayById.get(Number(city.id)) || getCityLocalDateISO(cityTz, -1);
+
     const cityYesterdayActual = showYesterday
-      ? actuals.find((a) =>
-          Number(a?.city_id) === Number(city.id) &&
-          String(a.date) === String(cityYesterday)
-        )
+      ? actualsByCityDate.get(keyFor(city.id, cityYesterday))
       : null;
 
-    const yesterdayHigh = showYesterday && cityYesterdayActual ? cityYesterdayActual.high : " ";
-    const yesterdayLow = showYesterday && cityYesterdayActual ? cityYesterdayActual.low : " ";
+    const yesterdayLabel = showYesterday
+      ? `H ${formatYesterdayValue(cityYesterdayActual?.high)} / L ${formatYesterdayValue(
+          cityYesterdayActual?.low
+        )}`
+      : "";
 
-    const prevGuess = (Array.isArray(guesses) ? guesses : []).find(
-      (g) => Number(g.city_id) === Number(city.id) && String(g.date) === targetDate
-    ) || {};
+    const prevGuess = guessesByCityDate.get(keyFor(city.id, targetDate)) || {};
+    const hasSavedForecast =
+      prevGuess &&
+      (prevGuess.high !== undefined || prevGuess.low !== undefined);
 
-    const hasSavedForecast = prevGuess.high !== undefined || prevGuess.low !== undefined;
-
-    const localNow = getTzDate(city.timezone || "UTC");
+    const localNow = getTzDate(cityTz);
     const cutoff = new Date(localNow.getTime());
     cutoff.setUTCHours(12, 0, 0, 0);
 
@@ -1133,7 +1158,9 @@ async function buildDailyGrid() {
       forecastDay === "today" && (ptNow >= ptCutoff || localNow >= cutoff);
 
     const card = document.createElement("div");
-    card.className = hasSavedForecast ? "city-card expanded" : "city-card collapsed";
+    card.className = hasSavedForecast
+      ? "city-card expanded"
+      : "city-card collapsed";
 
     card.innerHTML = `
       <div class="city-card-header">
@@ -1142,10 +1169,10 @@ async function buildDailyGrid() {
       </div>
       <div class="city-card-content">
         ${showYesterday
-          ? `<p><small>Yesterday: H ${yesterdayHigh}° / L ${yesterdayLow}°</small></p>`
+          ? `<p><small>Yesterday: ${yesterdayLabel}</small></p>`
           : ""}
 
-        ${hasPrevGuess
+        ${hasSavedForecast
           ? `<p><small> My current forecast: H ${prevGuess.high ?? "-"}° / L ${prevGuess.low ?? "-"}° </small></p>`
           : ""}
 
@@ -1154,7 +1181,8 @@ async function buildDailyGrid() {
             class="daily-high"
             data-city-id="${Number(city.id)}"
             value="${prevGuess.high ?? ""}"
-            min="-25" max="125"
+            min="-25"
+            max="125"
             ${isPastCutoff ? "disabled" : ""}>
         </label>
 
@@ -1163,7 +1191,8 @@ async function buildDailyGrid() {
             class="daily-low"
             data-city-id="${Number(city.id)}"
             value="${prevGuess.low ?? ""}"
-            min="-50" max="100"
+            min="-50"
+            max="100"
             ${isPastCutoff ? "disabled" : ""}>
         </label>
 
@@ -1174,7 +1203,7 @@ async function buildDailyGrid() {
     `;
 
     grid.appendChild(card);
-  });
+  }
 }
 
 function setSelectedHourUI(selectedLabel) {
