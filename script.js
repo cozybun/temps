@@ -50,7 +50,7 @@ function getObsUrl(cityObj) {
 
   if (!stationCode) return '';
 
-  return `https://mesowest.utah.edu/cgi-bin/droman/meso_base_dyn.cgi?stn=${encodeURIComponent(stationCode)}`;
+  return `https://mesowest.utah.edu/cgi-bin/droman/meso_base_dyn.cgi?stn=K${encodeURIComponent(stationCode)}`;
 }
 
 function setStatus(html, append = false) {
@@ -1265,7 +1265,7 @@ async function buildHourlyGrid() {
 
     const latestTempsUrl = getObsUrl(city);
     const latestTempsHtml = latestTempsUrl
-      ? `Latest temps: <a href="${latestTempsUrl}" target="_blank" rel="noopener noreferrer">View observations</a>`
+      ? `Latest temps: <a href="${latestTempsUrl}" target="_blank"`
       : `Latest temps: N/A`;
 
     const card = document.createElement("div");
