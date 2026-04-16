@@ -830,11 +830,8 @@ function refreshForecastDayOptions() {
   const tomorrowOption = forecastDaySelect.querySelector('option[value="tomorrow"]');
   if (!todayOption || !tomorrowOption) return;
 
-  const todayISO = getDailyForecastDateISO("today");
-  const tomorrowISO = getDailyForecastDateISO("tomorrow");
-
-  todayOption.textContent = `Today (${formatDisplayDate(todayISO)})`;
-  tomorrowOption.textContent = `Tomorrow (${formatDisplayDate(tomorrowISO)})`;
+  todayOption.textContent = "Today";
+  tomorrowOption.textContent = "Tomorrow";
 }
 
 // Return today's wall-date in PT as YYYY-MM-DD, no parsing/local timezone drift
