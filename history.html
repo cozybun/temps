@@ -411,24 +411,24 @@
   <main class="wrap">
     <header>
       <h1 class="title"> 📖 My Forecast History </h1>
-      <p class="subtitle">Filter, search, sort by clicking headers, and paginate forecasts.</p>
+      <p class="subtitle"> Filter, search, sort by clicking headers, and paginate my forecasts</p>
     </header>
 
     <section class="card">
-      <div id="status" class="status loading">Loading my forecast history…</div>
+      <div id="status" class="status loading"> Loading my forecast history… </div>
 
       <div class="controls">
         <div class="control">
-          <label>Forecast Type</label>
+          <label> Forecast Type </label>
           <div class="btn-group mode-toggle">
-            <button id="dailyModeBtn" class="button active" type="button">Daily</button>
-            <button id="hourlyModeBtn" class="button secondary" type="button">Hourly</button>
+            <button id="dailyModeBtn" class="button active" type="button"> Daily </button>
+            <button id="hourlyModeBtn" class="button secondary" type="button"> Hourly </button>
           </div>
         </div>
 
         <div class="control">
-          <label for="searchInput">Search</label>
-          <input id="searchInput" type="text" placeholder="City or date…">
+          <label for="searchInput"> Search </label>
+          <input id="searchInput" type="text" placeholder=" City or date… ">
         </div>
 
         <div class="control">
@@ -461,8 +461,8 @@
         <div class="control">
           <label>&nbsp;</label>
           <div class="btn-group">
-            <button id="clearBtn" class="button ghost" type="button">Clear Filters</button>
-            <button id="refreshBtn" class="button secondary" type="button">Refresh</button>
+            <button id="clearBtn" class="button ghost" type="button"> Clear Filters </button>
+            <button id="refreshBtn" class="button secondary" type="button"> Refresh </button>
           </div>
         </div>
       </div>
@@ -511,7 +511,7 @@
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
     const SUPABASE_PUB_KEY = "sb_publishable_lQ27fzzwJf27dUWPEW8UQA_NTY7naO6";
     if (!window.__supabase_client) {
-      window.__supabase_client = supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
+      window.__supabase_client = createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
     }
     const client = window.__supabase_client;
 
@@ -659,14 +659,14 @@
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (m) {
         const year = Number(m[1]);
-        const monthIndex = Number(m[2]) - 1; // 0-based for Date.UTC
+        const monthIndex = Number(m[2]) - 1;
         const day = Number(m[3]);
 
         // use local-noon UTC anchor to avoid date drift when formatted in ET
         return Date.UTC(year, monthIndex, day, 12, 0, 0);
       }
 
-      return Date.parse(s) || 0; // fallback for any other format
+      return Date.parse(s) || 0;
     }
 
     function makeHourInfo(hour, isSixHourHigh = false, sortMinuteOffset = 0) {
@@ -743,7 +743,7 @@
         timeZone: "America/New_York",
         month: "short",
         day: "numeric",
-        year: "numeric",
+        year: "numeric"
       }).format(new Date(t));
 
       if (!hasHour) return `${dateText} ET`;
@@ -816,7 +816,6 @@
       const isHourly = modeConfigFor(state.mode).hasHour;
 
       if (isHourly) return high;
-
       if (high === null && low === null) return null;
       if (low === null) return high;
       return (high + low) / 2;
@@ -1139,7 +1138,7 @@
 
     async function resolveAuthUserId() {
       // Prefer existing session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
       if (sessionError) {
         throw new Error(`Session check failed: ${sessionError.message}`);
       }
@@ -1149,7 +1148,7 @@
       }
 
       // Fallback: sign in anonymously
-      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
+      const { data: anonData, error: anonError } = await client.auth.signInAnonymously();
       if (anonError) {
         throw new Error(`Anonymous sign-in failed: ${anonError.message}`);
       }
@@ -1189,8 +1188,8 @@
       state.sortDir = "desc";
 
       const [scoreResult, cityResult] = await Promise.all([
-        supabase.from(cfg.table).select(cfg.select).eq("user_id", userId).order("date", { ascending: false }),
-        supabase.from("cities").select("id,name")
+        client.from(cfg.table).select(cfg.select).eq("user_id", userId).order("date", { ascending: false }),
+        client.from("cities").select("id,name")
       ]);
 
       if (scoreResult.error) {
