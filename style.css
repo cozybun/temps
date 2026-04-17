@@ -197,6 +197,7 @@ button:disabled {
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  margin-bottom: 0.6rem;
 }
 
 /* ARROW */
@@ -220,7 +221,7 @@ button:disabled {
   color: #6b7280;
   font-size: 1rem;
   display: block;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.2rem;
 }
 
 .city-card label {
@@ -233,24 +234,20 @@ button:disabled {
 
 .city-card input {
   width: 100%;
+  font-size: 1.1rem;
   padding: 0.9rem;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  font-size: 1.1rem;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  margin: 0.3rem 0 0.6rem !important;
+  display: block;
 }
 
 .city-card input:focus {
   outline: none;
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-}
-
-.city-card input {
-  margin: 0 !important;
-  width: 100%;
-  display: block;
 }
 
 /* DATE WRAPPER */
