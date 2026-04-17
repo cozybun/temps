@@ -802,7 +802,7 @@
 
       if (primary === null && secondary === null) return "—";
       if (isHourly || secondary === null) return formatAbsError(primary);
-      return `H ${formatAbsError(primary)} / L ${formatAbsError(secondary)}`;
+      return `H ${formatAbsError(primary)}° / L ${formatAbsError(secondary)}°`;
     }
 
     function dateSortValue(row) {
