@@ -672,7 +672,7 @@
       const isHourly = modeConfigFor(state.mode).hasHour;
     
       if (isHourly) {
-        return high === null ? "—" : formatInt(high)°;
+        return high === null ? "—" : `${formatInt(high)}°`;
       }
     
       if (high === null && low === null) return "—";
