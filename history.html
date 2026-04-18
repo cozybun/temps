@@ -428,7 +428,7 @@
   <main class="wrap">
     <header>
       <h1 class="title"> 📖 My Forecast History </h1>
-      <p class="subtitle"> Filter, search, sort by clicking headers, and paginate my forecasts</p>
+      <p class="subtitle"> Filter, search, sort, and paginate my forecasts </p>
     </header>
 
     <section class="card">
@@ -445,33 +445,32 @@
 
         <div class="control">
           <label for="searchInput"> Search </label>
-          <input id="searchInput" type="text" placeholder=" City or date… ">
+          <input id="searchInput" type="text" placeholder=" City or Date ">
         </div>
 
         <div class="control">
           <label for="cityFilter">City</label>
           <select id="cityFilter">
-            <option value="">All cities</option>
+            <option value=""> All Cities </option>
           </select>
         </div>
 
         <div class="control">
-          <label for="fromDate">From date</label>
-          <input id="fromDate" type="date">
+          <label for="fromDate"> From date </label>
+          <input id="fromDate" type="text" placeholder="MM-DD-YYYY">
         </div>
 
         <div class="control">
-          <label for="toDate">To date</label>
-          <input id="toDate" type="date">
+          <label for="toDate"> To date </label>
+          <input id="toDate" type="text" placeholder="MM-DD-YYYY">
         </div>
 
         <div class="control">
           <label for="pageSize">Rows / page</label>
           <select id="pageSize">
-            <option value="25">25</option>
             <option value="50" selected>50</option>
             <option value="100">100</option>
-            <option value="150">150</option>
+            <option value="200">200</option>
           </select>
         </div>
 
@@ -493,7 +492,7 @@
                 <th data-sort="forecast" data-label="Forecast"> Forecast <span class="sort-arrow"></span></th>
                 <th data-sort="actual" data-label="Actual"> Actual <span class="sort-arrow"></span></th>
                 <th data-sort="accuracy" data-label="Accuracy (Error)" class="accuracy-col"> Accuracy (Error) <span class="sort-arrow"></span></th>
-                <th data-sort="color" data-label="Color" class="color-col mode-daily-col"> Color <span class="sort-arrow"></span></th>
+                <th data-sort="color" data-label="Color" class="color-col mode-daily-col"> Color Score <span class="sort-arrow"></span></th>
                 <th data-sort="coins" data-label="Coins"> Coins <span class="sort-arrow"></span></th>
                 <th data-sort="mood" data-label="Mood" class="mode-daily-col"> Mood <span class="sort-arrow"></span></th>
               </tr>
@@ -656,27 +655,41 @@
 
     function formatInt(v) {
       const n = toNumber(v);
-      if (n === null) return `${"—"}`;
+      if (n === null) return "—";
       return `${Math.round(n)}`;
     }
-    
+
     function formatAbsError(v) {
       const n = toNumber(v);
-      if (n === null) return `${"—"}`;
+      if (n === null) return "—";
       return `${Math.abs(Math.round(n))}`;
+    }
+
+    function formatIntWithDegree(v) {
+      const n = toNumber(v);
+      if (n === null) return "—";
+      return `${Math.round(n)}°`;
+    }
+
+    function formatAbsErrorWithDegree(v) {
+      const n = toNumber(v);
+      if (n === null) return "—";
+      return `${Math.abs(Math.round(n))}°`;
     }
 
     function formatRange(row, isForecast = true) {
       const high = isForecast ? getForecastHigh(row) : getActualHigh(row);
       const low = isForecast ? getForecastLow(row) : getActualLow(row);
       const isHourly = modeConfigFor(state.mode).hasHour;
-    
+
       if (isHourly) {
-        return high === null ? "—" : `${formatInt(high)}°`;
+        return high === null ? "—" : formatIntWithDegree(high);
       }
-    
+
       if (high === null && low === null) return "—";
-      return `H ${formatInt(high)}° / L ${formatInt(low)}°`;
+      const highText = high === null ? "—" : formatIntWithDegree(high);
+      const lowText = low === null ? "—" : formatIntWithDegree(low);
+      return `H ${highText} / L ${lowText}`;
     }
 
     function parseDateValue(value) {
@@ -684,27 +697,53 @@
 
       const s = String(value).trim();
 
-      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);  // parse YYYY-MM-DD as an ET date safely, no local UTC rollover
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);  // parse YYYY-MM-DD safely
       if (m) {
         const year = Number(m[1]);
         const monthIndex = Number(m[2]) - 1;
         const day = Number(m[3]);
-
-        return Date.UTC(year, monthIndex, day, 12, 0, 0);  // use local-noon UTC anchor to avoid date drift when formatted in ET
+        return Date.UTC(year, monthIndex, day, 12, 0, 0);
       }
 
       return Date.parse(s) || 0;
+    }
+
+    function parseFilterDate(value) {
+      if (!value) return null;
+      const s = String(value).trim();
+      if (!s) return null;
+
+      let m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/); // MM-DD-YYYY
+      if (m) {
+        const month = Number(m[1]);
+        const day = Number(m[2]);
+        const year = Number(m[3]);
+
+        if (!Number.isFinite(month) || !Number.isFinite(day) || !Number.isFinite(year)) return null;
+        const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+        if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day || d.getUTCFullYear() !== year) return null;
+        return d.getTime();
+      }
+
+      m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);  // optional legacy support
+      if (m) {
+        const year = Number(m[1]);
+        const month = Number(m[2]);
+        const day = Number(m[3]);
+        const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+        if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day || d.getUTCFullYear() !== year) return null;
+        return d.getTime();
+      }
+
+      const parsed = Date.parse(s);
+      return Number.isFinite(parsed) ? parsed : null;
     }
 
     function makeHourInfo(hour, isSixHourHigh = false, sortMinuteOffset = 0) {
       if (typeof hour !== "number" || !Number.isFinite(hour)) return null;
       const normalizedHour = Math.trunc(hour);
       if (normalizedHour < 0 || normalizedHour > 23) return null;
-      return {
-        hour: normalizedHour,
-        isSixHourHigh,
-        sortMinuteOffset
-      };
+      return { hour: normalizedHour, isSixHourHigh, sortMinuteOffset };
     }
 
     function parseHourInfo(raw) {
@@ -713,8 +752,7 @@
       if (!s) return null;
 
       const eps = 1e-9;
-
-      const asNumber = Number(s);  // handle 20.5, 14.5, 20, 14, etc
+      const asNumber = Number(s);
       if (Number.isFinite(asNumber)) {
         const h = Math.trunc(asNumber);
         const frac = asNumber - h;
@@ -722,7 +760,7 @@
         return makeHourInfo(h, isSixHourHigh, isSixHourHigh ? 30 : 0);
       }
 
-      const m = s.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/i);  // handle formats like "8 pm", "8:00 PM", "2:30pm", "14:30"
+      const m = s.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/i);
       if (m) {
         const baseHourRaw = Number(m[1]);
         const minuteRaw = Number(m[2] || 0);
@@ -738,7 +776,7 @@
         return makeHourInfo(h, isSixHourHigh, isSixHourHigh ? 30 : 0);
       }
 
-      const ts = Date.parse(s);  // fallback: parse anything date-like and take extracted hour
+      const ts = Date.parse(s);
       if (Number.isNaN(ts)) return null;
       const dt = new Date(ts);
       const mns = dt.getMinutes();
@@ -757,7 +795,7 @@
       return `${h} ${ap}`;
     }
 
-    function formatDisplayDate(row, hasHour = true, hourParser = parseHourInfo) {
+    function formatDisplayDate(row, hasHour = false, hourParser = parseHourInfo) {
       if (!row?.date) return "—";
 
       const t = parseDateValue(row.date);
@@ -801,8 +839,11 @@
       const isHourly = modeConfigFor(state.mode).hasHour;
 
       if (primary === null && secondary === null) return "—";
-      if (isHourly || secondary === null) return formatAbsError(primary);
-      return `H ${formatAbsError(primary)}° / L ${formatAbsError(secondary)}°`;
+      if (isHourly || secondary === null) return primary === null ? "—" : formatAbsErrorWithDegree(primary);
+
+      const primaryText = primary === null ? "—" : formatAbsErrorWithDegree(primary);
+      const secondaryText = secondary === null ? "—" : formatAbsErrorWithDegree(secondary);
+      return `H ${primaryText} / L ${secondaryText}`;
     }
 
     function dateSortValue(row) {
@@ -933,7 +974,7 @@
     function buildCityOptions() {
       const current = cityFilter.value;
       const names = [...new Set(state.rows.map(r => r.city_name || "Unknown"))].sort((a, b) => a.localeCompare(b));
-      cityFilter.innerHTML = '<option value="">All cities</option>';
+      cityFilter.innerHTML = '<option value=""> All Cities </option>';
       names.forEach((name) => {
         const opt = document.createElement("option");
         opt.value = name;
@@ -975,12 +1016,8 @@
       }
 
       if (fromVal || toVal) {
-        const fromTs = fromVal ? new Date(fromVal).getTime() : null;
-        const toTs = toVal ? (() => {
-          const d = new Date(toVal);
-          d.setHours(23, 59, 59, 999);
-          return d.getTime();
-        })() : null;
+        const fromTs = fromVal ? parseFilterDate(fromVal) : null;
+        const toTs = toVal ? parseFilterDate(toVal) : null;
 
         filtered = filtered.filter((row) => {
           const t = parseDateValue(row.date);
@@ -994,7 +1031,7 @@
       if (query) {
         filtered = filtered.filter((row) => {
           const rowText = [
-            formatDisplayDate(row),
+            formatDisplayDate(row, modeConfigFor(state.mode).hasHour),
             row.city_name || "",
             formatRange(row, true),
             formatRange(row, false),
@@ -1046,7 +1083,7 @@
         const td = document.createElement("td");
         td.className = "empty";
         td.colSpan = visibleColumnCount();
-        td.textContent = total === 0 ? "No matching records found." : "No records on this page.";
+        td.textContent = total === 0 ? "No matching records found" : "No records on this page";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -1056,7 +1093,7 @@
         const tr = document.createElement("tr");
 
         const tdDate = document.createElement("td");
-        tdDate.textContent = formatDisplayDate(row);
+        tdDate.textContent = formatDisplayDate(row, modeConfigFor(state.mode).hasHour);
 
         const tdCity = document.createElement("td");
         tdCity.textContent = row.city_name || "Unknown";
@@ -1087,7 +1124,7 @@
           const color = accuracyColor(err);
           const dot = document.createElement("span");
           dot.className = `accuracy-dot ${color}`;
-          dot.title = err === null ? "No error data" : `Error: ${formatAbsError(err)}`;
+          dot.title = err === null ? "No error data" : `Error: ${formatAbsErrorWithDegree(err)}`;
           tdColor.appendChild(dot);
           tr.appendChild(tdColor);
         }
@@ -1133,7 +1170,7 @@
     function updateDateHeaderLabel() {
       const cfg = modeConfigFor(state.mode);
       dateHeader.innerHTML = `${cfg.dateLabel} <span class="sort-arrow"></span>`;
-      subtitleEl.textContent = `Filter, search, sort by clicking headers, and paginate your ${cfg.label.toLowerCase()} forecasts.`;
+      subtitleEl.textContent = `Filter, search, sort, and paginate my ${cfg.label.toLowerCase()} forecasts.`;
       updateSortIndicators();
     }
 
@@ -1146,26 +1183,16 @@
     }
 
     async function resolveAuthUserId() {
-      // Prefer existing session
       const { data: sessionData, error: sessionError } = await client.auth.getSession();
-      if (sessionError) {
-        throw new Error(`Session check failed: ${sessionError.message}`);
-      }
+      if (sessionError) throw new Error(`Session check failed: ${sessionError.message}`);
 
-      if (sessionData?.session?.user?.id) {
-        return sessionData.session.user.id;
-      }
+      if (sessionData?.session?.user?.id) return sessionData.session.user.id;
 
-      // Fallback: sign in anonymously
       const { data: anonData, error: anonError } = await client.auth.signInAnonymously();
-      if (anonError) {
-        throw new Error(`Anonymous sign-in failed: ${anonError.message}`);
-      }
+      if (anonError) throw new Error(`Anonymous sign-in failed: ${anonError.message}`);
 
       const anonUser = anonData?.user ?? anonData?.session?.user;
-      if (!anonUser?.id) {
-        throw new Error("Could not determine authenticated user after anonymous sign-in.");
-      }
+      if (!anonUser?.id) throw new Error("Could not determine authenticated user after anonymous sign-in");
 
       return anonUser.id;
     }
@@ -1227,7 +1254,7 @@
 
       buildCityOptions();
       state.filteredRows = [...state.rows];
-      setStatus(`Loaded ${state.rows.length} ${cfg.label.toLowerCase()} record(s).`, "default");
+      setStatus(`Loaded ${state.rows.length} ${cfg.label.toLowerCase()} record(s)`, "default");
       state.page = 1;
       state.pageSize = parseInt(pageSizeInput.value, 10) || 50;
       applyFilters(false);
@@ -1266,8 +1293,8 @@
 
     searchInput.addEventListener("input", () => applyFilters());
     cityFilter.addEventListener("change", () => applyFilters());
-    fromDateInput.addEventListener("change", () => applyFilters());
-    toDateInput.addEventListener("change", () => applyFilters());
+    fromDateInput.addEventListener("input", () => applyFilters());
+    toDateInput.addEventListener("input", () => applyFilters());
 
     pageSizeInput.addEventListener("change", () => {
       state.pageSize = parseInt(pageSizeInput.value, 10) || 50;
