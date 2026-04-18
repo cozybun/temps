@@ -743,10 +743,10 @@ async function incrementDailyStreak(uid, nextStreak) {
 
     if (error) return { ok: false, error };
 
-    const moodCapped = prevMood >= 25;
+    const moodCapped = prevMood >= 50;
     const message = moodCapped
-      ? `🎉 Yay, your streak grew to ${nextStreak}! Mood is maxed at 25.`
-      : `🎉 Yay, your streak grew to ${nextStreak}! Mood rose +1 to ${nextMood}.`;
+      ? `🎉 Yay, my streak grew to ${nextStreak}! Mood is already maxed at 50.`
+      : `🎉 Yay, my streak grew to ${nextStreak}! Mood rose +1 to ${nextMood}.`;
 
     return {
       ok: true,
