@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Stats</title>
+  <title> My Stats </title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -15,6 +15,8 @@
       --soft: #f3f4f6;
       --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
       --purple: #800080;
+      --cozy-purple: #8b5cf6;
+      --cozy-purple-hover: #7c3aed;
     }
 
     * { box-sizing: border-box; }
@@ -137,11 +139,13 @@
       margin-top: 14px;
       color: var(--muted);
       font-size: 0.9rem;
+      text-align: center;
     }
 
     .btn-row {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
       gap: 10px;
       margin-top: 14px;
       flex-wrap: wrap;
@@ -167,6 +171,19 @@
       color: #111827;
     }
 
+    button.secondary:hover {
+      background: #d1d5db;
+    }
+
+    button.cozy {
+      background: var(--cozy-purple);
+      box-shadow: 0 6px 14px rgba(139, 92, 246, 0.24);
+    }
+
+    button.cozy:hover {
+      background: var(--cozy-purple-hover);
+    }
+
     .loading,
     .error {
       margin: 6px 0 0;
@@ -186,8 +203,9 @@
     @media (max-width: 640px) {
       .title { font-size: 1.4rem; }
       .grid { grid-template-columns: 1fr; }
-      .btn-row { justify-content: stretch; }
-      button { width: 100%; }
+      .btn-row {
+        justify-content: space-between;
+      }
     }
   </style>
 </head>
@@ -195,33 +213,33 @@
   <div class="wrap">
     <header>
       <h1 class="title">🌤️ My Stats</h1>
-      <p class="subtitle">A snapshot of my current progress and stats</p>
+      <p class="subtitle"> A snapshot of my current progress and stats </p>
     </header>
 
     <section class="card">
-      <div id="status" class="loading">Loading my personal stats…</div>
+      <div id="status" class="loading"> Loading my personal stats… </div>
 
       <div id="statsPanel" style="display:none;">
         <div id="moodLine" class="status"></div>
 
         <div class="grid">
           <article class="stat">
-            <div class="label">🪙 Current Coins</div>
+            <div class="label"> 🪙 Current Coins </div>
             <p class="value" id="coins">—</p>
           </article>
 
           <article class="stat">
-            <div class="label">🪙 Total Coins</div>
+            <div class="label"> 🪙 Total Coins </div>
             <p class="value" id="totalCoins">—</p>
           </article>
 
           <article class="stat">
-            <div class="label">💗 Mood</div>
+            <div class="label"> 💗 Mood </div>
             <p class="value mood" id="mood">—</p>
           </article>
 
           <article class="stat">
-            <div class="label">⭐ Current Streak</div>
+            <div class="label"> ⭐ Current Streak </div>
             <p class="value" id="currentStreak">—</p>
           </article>
         </div>
@@ -229,8 +247,8 @@
         <p class="meta" id="lastForecast"> Last forecast: — </p>
 
         <div class="btn-row">
-          <button class="secondary" id="historyBtn" type="button"> Go To My History </button>
-          <button id="refreshBtn" type="button"> Refresh </button>
+          <button id="dailyBtn" class="cozy" type="button"> Go to Daily </button>
+          <button class="secondary" id="historyBtn" type="button"> My History </button>
         </div>
       </div>
     </section>
@@ -255,7 +273,7 @@
     const currentStreakEl = document.getElementById("currentStreak");
     const moodEl = document.getElementById("mood");
     const lastForecastEl = document.getElementById("lastForecast");
-    const refreshBtn = document.getElementById("refreshBtn");
+    const dailyBtn = document.getElementById("dailyBtn");
     const historyBtn = document.getElementById("historyBtn");
 
     function cleanNumber(v, fallback = 0, decimals = 2) {
@@ -268,7 +286,7 @@
     }
 
     function friendlyMoodLine(mood) {
-      if (mood >= 40) return "Mood is glowing today — your forecasts are showing clarity and prescience. ✨";
+      if (mood >= 40) return "Mood is glowing now — your forecasts are showing clarity and prescience. ✨";
       if (mood >= 30) return "Great progress. You're keeping daily forecasts in a solid, steady place. 🌿";
       if (mood >= 20) return "Solid rhythm. A win every day compounds into stronger scores over time. ☀️";
       if (mood >= 10) return "You're in the learning zone. Keep consistent and the trend should improve. 🌤️";
@@ -306,7 +324,7 @@
         .maybeSingle();
 
       if (error) {
-        if (error.code === "PGRST116") return null; // no rows
+        if (error.code === "PGRST116") return null;  // no rows
         throw error;
       }
 
@@ -331,7 +349,6 @@
           return;
         }
 
-        // Load user stats
         const { data, error } = await supabase
           .from("user_stats")
           .select("*")
@@ -341,7 +358,7 @@
         if (error) {
           if (error.code === "PGRST116") {
             statusEl.className = "error";
-            statusEl.textContent = "No stats for you yet. Your stats appear here once forecasts are scored.";
+            statusEl.textContent = "No stats yet. Your stats appear here once forecasts are scored.";
             return;
           }
           throw error;
@@ -373,7 +390,9 @@
       }
     }
 
-    refreshBtn.addEventListener("click", loadStats);
+    dailyBtn.addEventListener("click", () => {
+      window.location.href = "daily.html";
+    });
 
     historyBtn.addEventListener("click", () => {
       window.location.href = "history.html";
