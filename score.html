@@ -52,25 +52,21 @@
     }
     
     #scoreList:not(.is-hourly) {
-      display: flex !important;
-      flex-direction: row !important;
-      flex-wrap: nowrap !important;
-      align-items: stretch !important;
-      justify-content: flex-start !important;
-      gap: 10px;
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       width: 100%;
-      overflow-x: auto;
-      overflow-y: visible;
+      gap: 10px;
+      align-items: stretch;
       text-align: center !important;
-      padding-bottom: 6px;
-      scrollbar-gutter: stable;
+      overflow: visible; /* no scrollbar */
+      padding-bottom: 0;
     }
-
+    
     #scoreList:not(.is-hourly) .score-row {
-      width: 290px !important;
-      min-width: 290px !important;
-      max-width: 290px !important;
-      flex: 0 0 auto !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      flex: unset !important;
     }
 
     #scoreList:not(.is-hourly) .score-row .detail-line,
@@ -107,38 +103,6 @@
     .score-row.visible {
       opacity: 1;
       transform: scale(1) translateY(0);
-    }
-
-    .score-scroll {
-      position: relative;       /* required for ::before/::after */
-      overflow-x: auto;
-      overflow-y: hidden;
-    
-      scrollbar-width: none;    /* Firefox */
-      -ms-overflow-style: none; /* IE/Edge legacy */
-    }
-    
-    .score-scroll::-webkit-scrollbar {
-      display: none;           /* Chrome/Safari/Edge */
-    }
-    
-    .score-scroll::before,
-    .score-scroll::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      width: 24px;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .score-scroll::before {
-      left: 0;
-      background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
-    }
-    .score-scroll::after {
-      right: 0;
-      background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
     }
 
     .page-controls{
@@ -441,14 +405,15 @@
 
       #scoreList:not(.is-hourly) {
         -webkit-overflow-scrolling: touch;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         scrollbar-width: thin;
         gap: 8px;
       }
       
       #scoreList:not(.is-hourly) .score-row {
-        width: min(290px, 90vw) !important;
-        min-width: min(290px, 90vw) !important;
-        max-width: min(290px, 90vw) !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
       }
       
       #scoreList.is-hourly {
@@ -538,8 +503,9 @@
 
   <h1> My Score </h1>
   <p id="scoreDate"></p>
-  <div id="scoreList" class="score-scroll"></div>
-  
+
+  <div id="scoreList"></div>
+
   <div id="stats">
     <div class="stat-item">🪙 <span id="coinTotal">0</span></div>
     <div class="stat-row">
