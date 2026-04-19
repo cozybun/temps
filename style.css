@@ -1,3 +1,20 @@
+/* App-wide accent palette (for all non-leaderboard pages) */
+:root {
+  --brand-purple: #BF40BF;      /* bright purple */
+  --brand-purple-hover: #A63BA6;
+
+  --brand-blue: #4169E1;        /* royal blue */
+  --brand-blue-hover: #3556CA;
+
+  --brand-green: #228B22;       /* forest green */
+  --brand-green-hover: #1D7A1D;
+
+  --brand-blue-soft: #E8EDFF;
+  --brand-blue-soft-border: #B9C7F4;
+  --brand-shadow-blue: rgba(65, 105, 225, 0.28);
+  --brand-shadow-green: rgba(34, 139, 34, 0.28);
+}
+
 body {
   font-family: Calibri, Arial, sans-serif;
   max-width: 1000px;
@@ -25,7 +42,7 @@ form {
 select, input {
   padding: 0.9rem;
   font-size: 1.15rem;
-  border: 2px solid #4f46e5;
+  border: 2px solid var(--brand-blue);
   border-radius: 12px;
   margin: 0;
   box-sizing: border-box;
@@ -58,7 +75,7 @@ input:disabled {
 /* PRIMARY BUTTONS */
 button {
   padding: 1rem 2.2rem;
-  background: #0096FF;
+  background: var(--brand-blue);
   color: #ffffff;
   border: none;
   border-radius: 14px;
@@ -69,9 +86,9 @@ button {
 }
 
 button:hover {
-  background: #3b82f6;
+  background: var(--brand-blue-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 8px 18px var(--brand-shadow-blue);
 }
 
 button:active {
@@ -79,9 +96,9 @@ button:active {
 }
 
 button:disabled {
-  background: #FFFFFF !important;      
-  color: #89CFF0 !important;           
-  border: 2px solid #89CFF0 !important;
+  background: #ffffff !important;
+  color: var(--brand-blue) !important; 
+  border: 2px solid var(--brand-blue-soft-border) !important;
   opacity: 0.5 !important;
   cursor: not-allowed !important;
 }
@@ -89,7 +106,7 @@ button:disabled {
 .forecast-nav-btn {
   display: inline-block;
   padding: 0.8rem 1.3rem;
-  background: #9b59b6 !important;
+  background: var(--brand-purple) !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: 8px;
@@ -102,16 +119,16 @@ button:disabled {
 }
 
 .forecast-nav-btn:hover {
-  filter: brightness(1.05);
+  background: var(--brand-purple-hover) !important;
   transform: translateY(-1px);
 }
 
 #revealBtn {
-  background: #32CD32;
+  background: var(--brand-green);
 }
-
 #revealBtn:hover {
-  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
+  background: var(--brand-green-hover);
+  box-shadow: 0 8px 18px var(--brand-shadow-green);
 }
 
 #status {
@@ -142,23 +159,21 @@ button:disabled {
 }
 
 #hourlySaveBtn {
-  background: #0096FF;
+  background: var(--brand-blue);
 }
-
 #hourlySaveBtn:disabled {
   background: #ffffff !important;
-  color: #1d4ed8 !important;    
-  border: 2px solid #93c5fd !important;
+  color: #1d4ed8 !important;
+  border: 2px solid var(--brand-blue-soft-border) !important;
   opacity: 1 !important;
   cursor: not-allowed !important;
 }
-
 #hourlyScoreBtn {
-  background: #32CD32;
+  background: var(--brand-green);
 }
-
 #hourlyScoreBtn:hover {
-  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
+  background: var(--brand-green-hover);
+  box-shadow: 0 8px 18px var(--brand-shadow-green);
 }
 
 .city-grid {
@@ -254,8 +269,8 @@ button:disabled {
 
 .city-card input:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.22);
 }
 
 /* DATE WRAPPER */
@@ -383,9 +398,9 @@ button:disabled {
   padding: 0.25rem 0.7rem;
   font-size: 0.8rem;
   border-radius: 9999px;
-  border: 1px solid #93c5fd;
-  background: #dbeafe;
-  color: #1d4ed8;
+  border: 1px solid var(--brand-blue);
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
   cursor: pointer;
   line-height: 1.1;
   white-space: nowrap;
@@ -403,8 +418,8 @@ button:disabled {
 .hour-box {
   padding: 0.6rem 1rem;
   border-radius: 10px;
-  border: 2px solid #93c5fd;
-  background: #e0f2fe;
+  border: 2px solid var(--brand-blue);
+  background: var(--brand-blue-soft);
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
@@ -416,8 +431,8 @@ button:disabled {
 }
 
 .hour-box.active {
-  background: #38bdf8;
-  border-color: #38bdf8;
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
   color: white;
 }
 
@@ -516,7 +531,7 @@ button:disabled {
 }
 
 .latest-temps-link a {
-  color: #2563eb;
+  color: var(--brand-blue);
   text-decoration: none;
   font-weight: 600;
   opacity: 0.9;
@@ -554,6 +569,16 @@ button:disabled {
   font-weight: 600 !important;
   line-height: 1.4 !important;
   font-family: inherit !important;
+}
+
+/* always white text on active buttons */
+button:not(:disabled),
+.forecast-nav-btn,
+#revealBtn,
+#hourlySaveBtn,
+#hourlyScoreBtn,
+.hour-box.active {
+  color: #ffffff;
 }
 
 #hourlyForm .latest-temps-link {
