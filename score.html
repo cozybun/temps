@@ -57,6 +57,8 @@
       width: min(100%, var(--score-max-width));
       margin-inline: auto;
       grid-template-columns: repeat(var(--score-cols), minmax(0, 1fr));
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
     }
 
     #scoreList:not(.is-hourly) {
@@ -95,11 +97,37 @@
       justify-content: stretch;
     }
 
-    #scoreRatio {
-      margin: 6px 0 10px;
-      font-weight: 600;
+    .score-summary-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      width: 100%;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .score-summary-row #cityCircles {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-start;
+      width: auto;
+    }
+    
+    .score-summary-row #scoreRatio {
+      justify-self: center;
+      text-align: center;
+      font-size: 2rem;
       color: #000000;
-      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    
+    .score-summary-row #shareBtn {
+      justify-self: end;
+      width: auto;
     }
 
     .score-row {
@@ -412,25 +440,28 @@
         width: 100%;
         font-size: 22px;
       }
+      
+      .score-summary-row {
+        min-height: 36px;
+        margin-bottom: 18px;
+      }
+
+      .score-summary-row #scoreRatio {
+        font-size: 1.75rem;
+      }
+      
+      .score-summary-row #shareBtn {
+        width: auto;
+        font-size: 20px;
+        padding: 8px 12px;
+      }
+          
       #scoreList {
         gap: 6px;
       }
 
       .score-row {
         padding: 10px 4px;
-      }
-
-      #scoreList:not(.is-hourly) {
-        -webkit-overflow-scrolling: touch;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        scrollbar-width: thin;
-        gap: 8px;
-      }
-      
-      #scoreList:not(.is-hourly) .score-row {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: none !important;
       }
       
       #scoreList.is-hourly {
@@ -531,9 +562,11 @@
     </div>
   </div>
 
-  <div id="cityCircles"> ⚪ ⚪ ⚪ </div>
-  <div id="scoreRatio" class="score-ratio" aria-live="polite"></div>
-  <button id="shareBtn"> Share </button>
+  <div class="score-summary-row">
+    <div id="cityCircles"> ⚪ ⚪ ⚪ </div>
+    <div id="scoreRatio" class="score-ratio" aria-live="polite"></div>
+    <button id="shareBtn"> Share </button>
+  </div>
   <div id="scoreErrorBanner"></div>
   
 <script>
@@ -707,6 +740,8 @@
   
   function updateModeUI(mode) {
     const isDaily = mode === "daily";
+    const summaryRow = document.querySelector(".score-summary-row");
+    if (summaryRow) { summaryRow.style.display = isDaily ? "flex" : "none"; }
   
     if (modeDailyBtn) {
       modeDailyBtn.classList.toggle("active", isDaily);
