@@ -99,11 +99,11 @@
 
     .score-summary-row {
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-rows: auto auto auto;
+      justify-items: center;
       align-items: center;
-      width: 100%;
-      gap: 12px;
-      margin-bottom: 16px;
+      row-gap: 0.25rem;
+      text-align: center;
     }
 
     .score-summary-row #cityCircles {
@@ -741,7 +741,7 @@
   function updateModeUI(mode) {
     const isDaily = mode === "daily";
     const summaryRow = document.querySelector(".score-summary-row");
-    if (summaryRow) { summaryRow.style.display = isDaily ? "flex" : "none"; }
+    if (summaryRow) { summaryRow.style.display = isDaily ? "grid" : "none"; }
   
     if (modeDailyBtn) {
       modeDailyBtn.classList.toggle("active", isDaily);
