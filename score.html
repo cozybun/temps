@@ -109,6 +109,38 @@
       transform: scale(1) translateY(0);
     }
 
+    .score-scroll {
+      position: relative;       /* required for ::before/::after */
+      overflow-x: auto;
+      overflow-y: hidden;
+    
+      scrollbar-width: none;    /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge legacy */
+    }
+    
+    .score-scroll::-webkit-scrollbar {
+      display: none;           /* Chrome/Safari/Edge */
+    }
+    
+    .score-scroll::before,
+    .score-scroll::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 24px;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .score-scroll::before {
+      left: 0;
+      background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
+    }
+    .score-scroll::after {
+      right: 0;
+      background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
+    }
+
     .page-controls{
       display: flex;
       flex-direction: column;
@@ -506,9 +538,8 @@
 
   <h1> My Score </h1>
   <p id="scoreDate"></p>
-
-  <div id="scoreList"></div>
-
+  <div id="scoreList" class="score-scroll"></div>
+  
   <div id="stats">
     <div class="stat-item">🪙 <span id="coinTotal">0</span></div>
     <div class="stat-row">
