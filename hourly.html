@@ -3,21 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hourly Forecasts</title>
+  <title> Hourly Forecasts </title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="style.css" />
   <style>
+    :root {
+      --brand-purple: #BF40BF;
+      --brand-purple-hover: #A63BA6;    
+      --brand-blue: #4169E1;
+      --brand-blue-hover: #3556CA;
+      --brand-green: #228B22;
+      --brand-green-hover: #1D7A1D;
+      
+      --brand-blue-soft: #E8EDFF;
+      --brand-blue-soft-border: #B9C7F4;
+      --brand-shadow-blue: rgba(65, 105, 225, 0.28);
+      --brand-shadow-green: rgba(34, 139, 34, 0.28);
+      --text-on-brand: #ffffff;
+    }
+
     #helpCloseBtn {
       display: none !important;
     }
 
-    /* Match daily "Go to Hourly Forecasts" button*/
     #goToDailyBtn {
       padding: 0.8rem 1.3rem;
-      background: #9b59b6;
-      color: #fff;
-      border: none;
+      background: var(--brand-purple);
+      color: var(--text-on-brand);
+      border: 1px solid var(--brand-purple);
       border-radius: 8px;
       cursor: pointer;
       font-weight: 700;
@@ -29,8 +43,10 @@
     }
 
     #goToDailyBtn:hover {
-      filter: brightness(1.05);
+      background: var(--brand-purple-hover);
+      border-color: var(--brand-purple-hover);
       transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(166, 59, 166, 0.25);
     }
 
     /* Make hourly action buttons match daily button sizing/height/line-height */
@@ -43,32 +59,37 @@
       line-height: 1.2;
       padding: 1rem 2.2rem;
       border-radius: 14px;
-      border: none;
+      border: 1px solid transparent;
       box-sizing: border-box;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-on-brand);
     }
 
     #hourlySaveBtn {
-      background: #0096ff;   /* matches daily Save */
-      color: #fff;
-      border: none;
+      background: var(--brand-blue);
+      border-color: var(--brand-blue);
+      color: var(--text-on-brand);
     }
 
     #hourlySaveBtn:hover {
-      background: #3b82f6;
+      background: var(--brand-blue-hover);
+      border-color: var(--brand-blue-hover);
       transform: translateY(-2px);
-      box-shadow: 0 8px 18px rgba(79, 70, 229, 0.3);
+      box-shadow: 0 8px 18px var(--brand-shadow-blue);
     }
 
     #hourlyScoreBtn {
-      background: #32cd32;   /* matches daily View My Score */
-      color: #fff;
-      border: none;
+      background: var(--brand-green);
+      border-color: var(--brand-green);
+      color: var(--text-on-brand);
     }
 
     #hourlyScoreBtn:hover {
-      background: #2fb347;
+      background: var(--brand-green-hover);
+      border-color: var(--brand-green-hover);
       transform: translateY(-2px);
-      box-shadow: 0 8px 18px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 18px var(--brand-shadow-green);
     }
  
     #hourSelector {
@@ -80,9 +101,9 @@
     }
     
     #hourSelector .hour-box {
-      background: #dbeafe;
-      border: 1px solid #93c5fd;
-      color: #1e3a8a;
+      background: var(--brand-blue-soft);
+      border: 1px solid var(--brand-blue-soft-border);
+      color: var(--brand-blue);
       border-radius: 10px;
       padding: 0.5rem 0.85rem;
       margin: 0.25rem;
@@ -92,10 +113,10 @@
     }
     
     #hourSelector .hour-box.selected {
-      background: #4169E1 !important;
-      border-color: #1e40af !important;
-      color: #ffffff !important;
-      box-shadow: 0 0 0 2px #1e3a8a;
+      background: var(--brand-blue) !important;
+      border-color: var(--brand-blue-hover) !important;
+      color: var(--text-on-brand) !important;
+      box-shadow: 0 0 0 2px var(--brand-blue-hover);
     }
 
     .latest-temps-caption {
@@ -106,7 +127,7 @@
     }
     
     .latest-temps-caption a {
-      color: #1d4ed8;
+      color: var(--brand-blue);
       text-decoration: underline;
       font-weight: 600;
     }
@@ -119,7 +140,7 @@
 <body>
   <div style="text-align:center; margin:1rem 0; display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
     <a href="daily.html">
-      <button type="button" id="goToDailyBtn"> ← Go to Daily Forecasts </button>
+      <button type="button" id="goToDailyBtn"> Daily Forecasts </button>
     </a>
   </div>
 
