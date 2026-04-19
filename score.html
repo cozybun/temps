@@ -1120,31 +1120,30 @@
 
   function buildShare(scores, totalCoins, totalMood, currentStreak) {
     if (!shareBtn) return;
-    
-    const buildShareText = () => {  // keep helper logic near click handler to make it easy to tweak later
-      const circles = cityCirclesFromScores(scores || []);
   
-      const totalCities =  // total number of cities
-        Array.isArray(scores) && scores.length > 0
-          ? scores.length
-          : circles.trim()
-              ? circles.trim().split(/\s+/).filter(Boolean).length
-              : 0;
+    const formatShareDate = (label) => {
+      const s = String(label || '').trim();
+      const m = s.match(/^([A-Za-z]{3,9})\s+(\d{1,2})$/);  // format DD MM
+      if (m) return `${m[2]} ${m[1]}`;
+      const m2 = s.match(/^(\d{1,2})\s+([A-Za-z]{3,9})$/);  // already DD MM
+      return m2 ? `${m2[1]} ${m2[2]}` : s;
+    };
   
-      const successCount = (circles.match(/[🟢🟡]/g) || []).length;  // count of green or yellow circles
+    shareBtn.onclick = async () => {
+      const circles = cityCirclesFromScores(scores || '');
   
-      const dateLine = `${ydayLabel}\t${successCount}/${totalCities}`;  // tab between date & x/#
+      const statuses = circles.match(/[🟢🟡⚪]/g) || [];  // count from rendered circles
+      const successCount = statuses.filter((c) => c === '🟢' || c === '🟡').length;  // count of green or yellow circles
+      const totalCount = statuses.length || (Array.isArray(scores) ? scores.length : 0);
   
-      return [
+      const dateLine = `${formatShareDate(ydayLabel)}    ${successCount}/${totalCount}`;  // 4 spaces as fallback separator
+  
+      const text = [
         'Temps with Friends',
         dateLine,
         circles,
         `🪙 ${totalCoins} 💗 ${formatSignedNumber(totalMood)} ⭐ ${currentStreak}`,
-      ].join('\n\n');  // 1 blank line between each line
-    };
-  
-    shareBtn.onclick = async () => {
-      const text = buildShareText();
+      ].join('\n\n');  // one blank line between each share line
   
       const ok = await copyText(text);
       if (ok) {
