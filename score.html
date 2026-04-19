@@ -95,6 +95,13 @@
       justify-content: stretch;
     }
 
+    #scoreRatio {
+      margin: 6px 0 10px;
+      font-weight: 600;
+      color: #000000;
+      font-size: 1rem;
+    }
+
     .score-row {
       flex: 1 1 0;
       min-width: 0;
@@ -525,6 +532,7 @@
   </div>
 
   <div id="cityCircles"> ⚪ ⚪ ⚪ </div>
+  <div id="scoreRatio" class="score-ratio" aria-live="polite"></div>
   <button id="shareBtn"> Share </button>
   <div id="scoreErrorBanner"></div>
   
@@ -594,6 +602,14 @@
         banner.textContent = "";
       }, 5000);
     }
+  }
+
+  function toggleScoreRatioIfReady(isDailyMode) {
+    const scoreRatioEl = document.getElementById("scoreRatio");
+    if (!scoreRatioEl) return;
+  
+    const hasText = scoreRatioEl.textContent.trim().length > 0;
+    scoreRatioEl.style.display = isDailyMode && hasText ? "block" : "none";
   }
 
   function hasValue(v) {
@@ -688,25 +704,38 @@
     div.textContent = String(value ?? "");
     return div.innerHTML;
   }
-
+  
   function updateModeUI(mode) {
     const isDaily = mode === "daily";
-
+  
     if (modeDailyBtn) {
       modeDailyBtn.classList.toggle("active", isDaily);
       modeDailyBtn.setAttribute("aria-pressed", String(isDaily));
     }
-
+  
     if (modeHourlyBtn) {
       modeHourlyBtn.classList.toggle("active", !isDaily);
       modeHourlyBtn.setAttribute("aria-pressed", String(!isDaily));
     }
-
-    if (shareBtn) shareBtn.style.display = isDaily ? "inline-block" : "none";
-    if (cityCirclesEl) cityCirclesEl.style.display = isDaily ? "flex" : "none";
-
+  
+    if (shareBtn) {  // show/hide controls & blocks depending on mode
+      shareBtn.style.display = isDaily ? "inline-block" : "none";
+    }
+  
+    if (cityCirclesEl) {
+      cityCirclesEl.style.display = isDaily ? "flex" : "none";
+    }
+  
+    const scoreRatioEl = document.getElementById("scoreRatio");
+    if (scoreRatioEl) {
+      scoreRatioEl.style.display = isDaily ? "block" : "none";
+    }
+  
     const hourlyStatsRow = document.querySelector("#stats .stat-row");
-    if (hourlyStatsRow) hourlyStatsRow.style.display = isDaily ? "flex" : "none";
+    if (hourlyStatsRow) {
+      hourlyStatsRow.style.display = isDaily ? "flex" : "none";
+    }
+    toggleScoreRatioIfReady(isDaily);
   }
 
   function setMode(mode) {
@@ -1164,8 +1193,16 @@
     if (!scoreListEl) return;
 
     const scoreRatioEl =
-      document.getElementById("scoreRatio");
-
+      document.getElementById("scoreRatio") ||
+      (() => {
+        const fallback = document.createElement("div");
+        fallback.id = "scoreRatio";
+        fallback.className = "score-ratio";
+        if (cityCirclesEl && cityCirclesEl.parentElement) {
+          cityCirclesEl.insertAdjacentElement("afterend", fallback);
+        }
+        return fallback;
+      })();
     const getCityIdsForSummary = (rows = []) => {
       if (Array.isArray(CITY_ORDER) && CITY_ORDER.length > 0) return CITY_ORDER;
       return rows
@@ -1174,19 +1211,20 @@
     };
 
     const buildCitySummary = (rows = []) => {
-      const cityIds = getCityIdsForSummary(rows);
       const cityRows = Array.isArray(rows) ? rows : [];
-
+      const forecastRows = cityRows.filter((r) => hasForecast(r));
+      const cityIds = Array.isArray(CITY_ORDER) && CITY_ORDER.length ? CITY_ORDER : forecastRows.map((r) => r?.city_id).filter((v, i, a) => v != null && a.indexOf(v) === i);
+    
+      if (!forecastRows.length) return null;  // keep ratio hidden if no daily score text
+    
       const circlesByCity = cityIds.map((cityId) => {
-        const row = cityRows.find((r) => Number(r?.city_id) === Number(cityId)) || {};
+        const row = forecastRows.find((r) => Number(r?.city_id) === Number(cityId)) || {};
         return resultCircle(row);
       });
-
+    
       const successCount = circlesByCity.filter((c) => c === "🟢" || c === "🟡").length;
-      const totalCount = cityIds.length;
-
-      return { circlesByCity, successCount, totalCount };
-    };
+      return { circlesByCity, successCount, totalCount: circlesByCity.length };
+    }
 
     const renderScoreRatioLine = (summaryOrNull, isVisible = true) => {
       if (!scoreRatioEl) return;
