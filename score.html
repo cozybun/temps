@@ -1090,7 +1090,7 @@
           <td style="text-align:right;padding:8px 6px;">${escapeHtml(toNumOrDash(hourlyForecast))}°</td>
           <td style="text-align:right;padding:8px 6px;">${escapeHtml(toNumOrDash(hourlyActual))}°</td>
           <td style="text-align:right;padding:8px 6px;">${escapeHtml(formatAbs(hourlyError))}°</td>
-          <td style="text-align:right;padding:8px 6px;">🪙 ${escapeHtml(forecasted ? `+${Number(s.coins || 0)}` : "0")}</td>
+          <td style="text-align:right;padding:8px 6px;">🪙 ${escapeHtml(forecasted ? `${Number(s.coins || 0)}` : "0")}</td>
         `;
 
         tbody.appendChild(tr);
@@ -1412,7 +1412,7 @@
         </div>
         <div class="msg">${escapeHtml(s.message || (forecasted ? "" : "No submission"))}</div>
         <div class="detail"></div>
-        <div class="coin">${escapeHtml(forecasted ? `🪙 +${Number(s.coins || 0)}` : "🪙 0")}</div>
+        <div class="coin">${escapeHtml(forecasted ? `🪙 ${Number(s.coins || 0)}` : "🪙 0")}</div>
         <div class="mood">${escapeHtml(forecasted ? `💗 ${formatSignedNumber(s.mood)}` : "💗 —")}</div>
       `;
 
