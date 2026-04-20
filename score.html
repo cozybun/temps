@@ -420,7 +420,26 @@
       min-height: 20px;
       font-size: 14px;
     }
-
+    
+    /* Centered view for all auth-missing paths */
+    .no-session-state {
+      min-height: 45vh;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1rem 0;
+    }
+    
+    .no-session-state .no-session-card {
+      max-width: 28rem;
+      width: 100%;
+      color: #374151;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
     @media (max-width: 700px) {
       body {
         padding: 14px 12px;
@@ -893,18 +912,20 @@
 
   async function checkAuth() {
     const userId = await getSessionUserId();
-
     if (!userId) {
       showBanner("No active session. Make a daily forecast to create session.", true);
-
-      if (scoreListEl) scoreListEl.innerHTML = "<p> No user session found </p>";
+    
+      if (scoreListEl) {
+        scoreListEl.classList.remove("is-hourly");
+        scoreListEl.removeAttribute("data-cols");  // reset grid width logic
+        scoreListEl.innerHTML = "<p> No user session found </p>";
+      }
       if (coinTotalEl) coinTotalEl.textContent = "0";
       if (moodTotalEl) moodTotalEl.textContent = "—";
       if (streakEl) streakEl.textContent = "—";
-
+    
       return false;
     }
-
     currentUserId = userId;
     return true;
   }
@@ -1285,6 +1306,8 @@
     }
 
     if (!currentUserId) {
+      scoreListEl.classList.remove("is-hourly");
+      scoreListEl.removeAttribute("data-cols");
       scoreListEl.innerHTML = "<p> No user found. Please make a daily forecast. </p>";
       if (coinTotalEl) coinTotalEl.textContent = "0";
       if (moodTotalEl) moodTotalEl.textContent = "—";
@@ -1468,7 +1491,11 @@
     if (currentUserId) {
       loadScore();
     } else {
-      if (scoreListEl) scoreListEl.innerHTML = "<p>No active session. Please sign in again.</p>";
+      if (scoreListEl) {
+        scoreListEl.classList.remove("is-hourly");
+        scoreListEl.removeAttribute("data-cols");
+        scoreListEl.innerHTML = "<p> No active session. Please sign in again. </p>";
+      }
       if (coinTotalEl) coinTotalEl.textContent = "0";
       if (moodTotalEl) moodTotalEl.textContent = "—";
       if (streakEl) streakEl.textContent = "—";
@@ -1481,7 +1508,9 @@
     const ok = await checkAuth();
     if (!ok) {
       if (scoreListEl) {
-        scoreListEl.innerHTML = "<p>No active session. Make a daily forecast to create session.</p>";
+        scoreListEl.classList.remove("is-hourly");
+        scoreListEl.removeAttribute("data-cols");
+        scoreListEl.innerHTML = "<p> No active session. Save a daily forecast to create session. </p>";
       }
       return;
     }
