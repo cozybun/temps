@@ -718,59 +718,213 @@ async function checkIncrementDailyStreak(payload, forecastDate, explicitUserId =
 }
 
 // Update user's current mood & streak
-async function incrementDailyStreak(uid) {
-  try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+async function incrementDailyStreak(userId, forecastDate = null) {
+  if (!userId) {
+    return { ok: false, reason: "NO_USER", error: "Missing userId." };
+  }
 
-    const { data: row, error: readError } = await client
-      .from("user_stats")
-      .select("current_streak, mood, coins, total_coins, last_streak_date")
-      .eq("user_id", uid)
-      .maybeSingle();
-
-    if (readError) {
-      return { ok: false, error: readError };
+  const toDateOnlyUTC = (value) => {
+    if (!value) {
+      const d = new Date();
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     }
 
-    const prevStreak = Number(row?.current_streak ?? 0);
-    const prevMood = Number(row?.mood ?? 0);
-    const lastStreakDate = row?.last_streak_date ?? null;
+    if (value instanceof Date) {
+      if (!Number.isFinite(value.getTime())) return null;
+      return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+    }
 
-    if (lastStreakDate === today) {  // do not increment twice in same day
+    if (typeof value === "number") {
+      const d = new Date(value);
+      if (!Number.isFinite(d.getTime())) return null;
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    }
+
+    if (typeof value === "string") {
+      const ymd = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (ymd) {
+        const y = Number(ymd[1]);
+        const m = Number(ymd[2]) - 1;
+        const d = Number(ymd[3]);
+        return new Date(Date.UTC(y, m, d));
+      }
+
+      const parsed = new Date(value);
+      if (!Number.isFinite(parsed.getTime())) return null;
+      return new Date(
+        Date.UTC(
+          parsed.getUTCFullYear(),
+          parsed.getUTCMonth(),
+          parsed.getUTCDate()
+        )
+      );
+    }
+
+    return null;
+  };
+
+  const toYMD = (d) => {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const da = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${da}`;
+  };
+
+  const dayDiff = (a, b) => {
+    return Math.round((a.getTime() - b.getTime()) / 86400000);
+  };
+
+  const target = toDateOnlyUTC(forecastDate);
+  if (!target) {
+    return { ok: false, reason: "INVALID_DATE", error: "Invalid forecastDate." };
+  }
+  const targetYMD = toYMD(target);
+
+  try {  // get most recent forecast date of user
+    const latestRes = await supabase
+      .from("daily_forecasts")
+      .select("date")
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+      .limit(1);
+
+    if (latestRes.error) {
+      return { ok: false, reason: "FETCH_LATEST_FORECAST_ERROR", error: latestRes.error };
+    }
+
+    const statsRes = await supabase  // get user streak stats
+      .from("user_stats")
+      .select("current_streak, record_streak")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (statsRes.error && statsRes.error.code !== "PGRST116") {
+      return { ok: false, reason: "FETCH_STATS_ERROR", error: statsRes.error };
+    }
+
+    const latestRow = latestRes.data && latestRes.data.length ? latestRes.data[0] : null;
+    const latest = latestRow ? toDateOnlyUTC(latestRow.date) : null;
+
+    const currentStreak = statsRes.data ? Number(statsRes.data.current_streak || 0) : 0;
+    const recordStreak = statsRes.data ? Number(statsRes.data.record_streak || 0) : 0;
+
+
+    if (latest && target.getTime() === latest.getTime()) {  // no change if selected date is same as latest forecast date
+      if (!statsRes.data) {  // initialize streak to 1 if no stats row exists yet
+        const initPayload = {
+          user_id: userId,
+          current_streak: 1,
+          record_streak: 1,
+        };
+
+        const initRes = await supabase
+          .from("user_stats")
+          .upsert(initPayload, { onConflict: "user_id" });
+
+        if (initRes.error) {
+          return { ok: false, reason: "INIT_STATS_ERROR", error: initRes.error };
+        }
+
+        return {
+          ok: true,
+          reason: "INIT_SAME_DATE",
+          message: "Streak initialized to 1 (same-day forecast with no prior user stats row)",
+          data: { current_streak: 1, record_streak: 1, latest_forecast_date: targetYMD },
+        };
+      }
+
       return {
         ok: false,
-        reason: "ALREADY_UPDATED_TODAY",
-        data: row,
-        prevStreak,
-        prevMood,
+        reason: "NO_CHANGE_SAME_DATE",
+        message: `No change: already logged for ${targetYMD}.`,
+        data: {
+          current_streak: currentStreak,
+          record_streak: recordStreak,
+          latest_forecast_date: toYMD(latest),
+        },
       };
     }
 
-    const nextStreak = lastStreakDate === yesterday ? prevStreak + 1 : 1;
-    const nextMood = Math.min(50, prevMood + 1);
+    const prevRes = await supabase  // get latest forecast date before selected date
+      .from("daily_forecasts")
+      .select("date")
+      .eq("user_id", userId)
+      .lt("date", targetYMD)
+      .order("date", { ascending: false })
+      .limit(1);
 
-    const payload = {
-      user_id: uid,
-      current_streak: Number.isFinite(nextStreak) ? nextStreak : 1,
-      mood: nextMood,
-      last_streak_date: today,
-    };
-
-    const { data: updated, error } = await client
-      .from("user_stats")
-      .upsert(payload, { onConflict: "user_id" })
-      .select()
-      .single();
-
-    if (error) {
-      return { ok: false, error };
+    if (prevRes.error) {
+      return { ok: false, reason: "FETCH_PREV_FORECAST_ERROR", error: prevRes.error };
     }
 
-    const message = `🎉 Yay, my streak grew to ${updated.current_streak}! Mood is now ${updated.mood}.`;
-    return { ok: true, changed: true, data: updated, message };
+    const prevRow = prevRes.data && prevRes.data.length ? prevRes.data[0] : null;
+    const prevDate = prevRow ? toDateOnlyUTC(prevRow.date) : null;
+
+    let nextStreak = 1;
+    let nextReason = "RESET";
+
+    if (!prevDate) {  // if no older forecast date exists for user
+      nextStreak = 1;
+      nextReason = "INIT";
+    } else {
+      const diff = dayDiff(target, prevDate);
+      if (diff === 1) {
+        nextStreak = currentStreak + 1;
+        nextReason = "INCREMENT";
+      } else if (diff > 1) {
+        nextStreak = 1;
+        nextReason = "RESET";
+      } else {
+        return {
+          ok: false,
+          reason: "NO_CHANGE",
+          message: `No change for ${targetYMD} (non-forward date sequence).`,
+          data: {
+            current_streak: currentStreak,
+            record_streak: recordStreak,
+            latest_forecast_date: latest ? toYMD(latest) : null,
+          },
+        };
+      }
+    }
+
+    const payload = {
+      user_id: userId,
+      current_streak: nextStreak,
+    };
+
+    // update record streak only if new streak >= record streak
+    if (!statsRes.data || nextStreak >= recordStreak) {
+      payload.record_streak = nextStreak;
+    }
+
+    const upRes = await supabase
+      .from("user_stats")
+      .upsert(payload, { onConflict: "user_id" });
+
+    if (upRes.error) {
+      return { ok: false, reason: "UPDATE_STATS_ERROR", error: upRes.error };
+    }
+
+    return {
+      ok: true,
+      reason: nextReason,
+      message:
+        nextReason === "INCREMENT"
+          ? `Streak increased to ${nextStreak}.`
+          : nextReason === "RESET"
+            ? `Streak reset to 1`
+            : `Streak initialized to 1`,
+      data: {
+        current_streak: nextStreak,
+        record_streak:
+          payload.record_streak !== undefined ? payload.record_streak : recordStreak,
+        selected_forecast_date: targetYMD,
+        previous_forecast_date: prevDate ? toYMD(prevDate) : null,
+      },
+    };
   } catch (err) {
-    return { ok: false, error: err };
+    return { ok: false, reason: "EXCEPTION", error: err };
   }
 }
 
@@ -1771,7 +1925,7 @@ async function handleDailySubmit(e) {
   await buildDailyGrid();
 
   if (predictedStreak?.ok) {  // increment streak only once after successful save
-    const streakResult = await incrementDailyStreak(finalUserId);
+    const streakResult = await incrementDailyStreak(finalUserId, forecastDate);
     if (streakResult.ok) {
       await promptAndSaveBackupEmail(streakResult.data.current_streak);
       setStatus(`<span style="color:#16a34a;">${streakResult.message}</span>`, true);
