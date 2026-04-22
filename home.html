@@ -115,10 +115,8 @@
   <script>
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
     const SUPABASE_PUB_KEY = "sb_publishable_lQ27fzzwJf27dUWPEW8UQA_NTY7naO6";
-    if (!window.__supabase_client) {
-      window.__supabase_client = supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
-    }
-    const client = window.__supabase_client;
+    const client = window.__supabase_client || supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
+    window.__supabase_client = client;
 
     const restoreBtn = document.getElementById("restore-btn");
     const restorePanel = document.getElementById("restore-panel");
@@ -153,7 +151,7 @@
     async function handleRecoveryCallback() {
       if (!isRecoveryRedirect()) return;
 
-      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+      const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
       if (error) {
         setStatus("Cannot complete sign-in from your link. Please try again.", "bad");
         return;
@@ -195,8 +193,8 @@
       sendRestoreBtn.disabled = true;
       setStatus("Checking email...", "muted");
 
-      try {  // explicitly check auth.users via SQL function
-        const { data: exists, error: checkErr } = await supabase.rpc("has_auth_email", {
+      try {  // explicitly check auth.users for email via SQL function
+        const { data: exists, error: checkErr } = await client.rpc("has_auth_email", {
           p_email: email
         });
 
@@ -213,7 +211,7 @@
           return;
         }
 
-        const { error: otpErr } = await supabase.auth.signInWithOtp({  // send recovery magic link to email
+        const { error: otpErr } = await client.auth.signInWithOtp({  // send recovery magic link to email
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/home.html`
