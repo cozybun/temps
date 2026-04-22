@@ -1,5 +1,5 @@
 🐰 Temps With Friends 🔮
 
-A tough social forecasting puzzle 😊
+A social forecasting strategy game 😊
 
-Guess Temps, Help Buns, Get Cozy 👯
+Guess Temps, Help Buns, Cozy Up 👯
