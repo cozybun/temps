@@ -120,27 +120,75 @@ const BACKUP_USERNAME_INPUT_HINT = "Your 7+ day streak unlocked a backup account
 
 function getBackupUsernameFromMetadata(user) {
   return (
-    (user?.user_metadata?.public_username ||
-      user?.user_metadata?.username ||
-      "").trim()
-  );
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.public_username ||
+    user?.user_metadata?.username ||
+    ""
+  ).trim();
 }
 
-async function claimBackupEmail(uid, email) {
-  const { data, error } = await client.rpc("claim_public_email", {
-    p_user_id: uid,
-    p_email: email
+async function syncPublicUsersTable(uid, updates) {
+  if (!uid || !updates || Object.keys(updates).length === 0) return { ok: true };
+
+  const payload = { id: uid, ...updates };
+
+  const { error } = await client  // update existing row by id, add row if missing
+    .from("users")
+    .upsert(payload, { onConflict: "id" });
+
+  if (error) {
+    return {
+      ok: false,
+      message: `Failed to sync users table (${Object.keys(updates).join(", ")}): ${error.message}`
+    };
+  }
+
+  return { ok: true };
+}
+
+async function claimBackupEmail(uid, rawEmail) {
+  const raw = String(rawEmail || "").trim();
+  if (!raw) return { ok: false, message: "Email cannot be empty" };
+
+  const normalized = raw.toLowerCase();
+  if (!isValidEmail(normalized)) {
+    return { ok: false, message: "Invalid email format" };
+  }
+
+  const { data: currentSession, error: meErr } = await client.auth.getUser();
+  if (meErr || !currentSession?.user) {
+    return { ok: false, message: "Logged-in user not found; cannot save backup email" };
+  }
+
+  if (currentSession.user.id !== uid) {
+    return {
+      ok: false,
+      message: "Auth mismatch: cannot save backup email for a different user"
+    };
+  }
+
+  const { data, error } = await client.auth.updateUser({
+    email: normalized
   });
 
   if (error) {
-    return { ok: false, message: `Backup email save failed: ${error.message}` };
+    return { ok: false, message: `Could not save email to auth.users: ${error.message}` };
   }
 
-  if (data === null || data === false) {    // assume function returns null when email is taken or invalid to claim
-    return { ok: false, message: "That email is already in use or unavailable" };
+  const syncRes = await syncPublicUsersTable(uid, { email: normalized });
+  if (!syncRes.ok) {
+    return {
+      ok: false,
+      message: `Email saved to auth.users, but users table sync failed: ${syncRes.message}`
+    };
   }
 
-  return { ok: true, value: data };
+  return {
+    ok: true,
+    value: normalized,
+    needsConfirmation: !Boolean(data?.user?.email_confirmed_at),
+    user: data?.user || null
+  };
 }
 
 async function claimBackupUsername(uid, rawUsername) {
@@ -155,34 +203,47 @@ async function claimBackupUsername(uid, rawUsername) {
     };
   }
 
-  // save username in public.users table
-  const { data, error } = await client.rpc("claim_public_username", {
+  const { data, error } = await client.rpc("claim_public_username", {  // save username in public.users table
     p_user_id: uid,
     p_desired_username: normalized
   });
 
-  if (error) return { ok: false, message: `Username save failed: ${error.message}` };
-  if (data === null || data === false) return { ok: false, message: "That username is already taken" };
+  if (error) {
+    return { ok: false, message: `Username save failed: ${error.message}` };
+  }
+  if (data === null || data === false) {
+    return { ok: false, message: "That username is already taken" };
+  }
 
-  try {    // update auth user metadata for display name / auth.users metadata
+  // Sync users table username col explicitly
+  const syncRes = await syncPublicUsersTable(uid, { username: normalized });
+  if (!syncRes.ok) {
+    return {
+      ok: false,
+      message: `Username reserved, but users table sync failed: ${syncRes.message}`
+    };
+  }
+
+  try {
     const { data: currentSession } = await client.auth.getUser();
     if (!currentSession?.user) {
       return {
         ok: false,
-        message: "Logged-in user not found; username saved, but display metadata not updated"
+        message: "Logged-in user not found. Username reserved, but display name update skipped"
       };
     }
 
     if (currentSession.user.id !== uid) {
       return {
         ok: false,
-        message: "Username saved, but auth metadata update skipped (UID mismatch)"
+        message: "Username reserved, but auth metadata update skipped (UID mismatch)"
       };
     }
 
-    const { error: authErr } = await client.auth.updateUser({
+    const { error: authErr } = await client.auth.updateUser({  // write to auth.users display name field
       data: {
         username: normalized,
+        public_username: normalized,
         display_name: normalized
       }
     });
@@ -190,20 +251,20 @@ async function claimBackupUsername(uid, rawUsername) {
     if (authErr) {
       return {
         ok: false,
-        message: `Username saved, but Display Name update failed: ${authErr.message}`
+        message: `Username reserved, but auth metadata update failed: ${authErr.message}`
       };
     }
   } catch (e) {
     return {
       ok: false,
-      message: `Username saved, but metadata sync failed: ${String(e?.message || e)}`
+      message: `Username reserved, but metadata sync failed: ${String(e?.message || e)}`
     };
   }
 
   return { ok: true, value: normalized };
 }
 
-// Prompt user to save email & username 
+// Prompt user to save email & username
 async function promptAndSaveBackupEmail(currentStreak) {
   if (currentStreak < BACKUP_EMAIL_STREAK) return;
 
@@ -223,6 +284,7 @@ async function promptAndSaveBackupEmail(currentStreak) {
   if (!isPromptDue(currentStreak, lastPromptedAt)) return;
 
   const saved = [];
+  let emailNeedsConfirm = false;
 
   if (needsEmail) {
     const raw = window.prompt(
@@ -234,20 +296,14 @@ async function promptAndSaveBackupEmail(currentStreak) {
       return;
     }
 
-    const email = raw.trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      setStatus('<span style="color:red;"> Please enter a valid email.</span>');
-      await markBackupEmailPrompt();
-      return;
-    }
-
-    const claimed = await claimBackupEmail(user.id, email);
+    const claimed = await claimBackupEmail(user.id, raw);
     if (!claimed.ok) {
       setStatus(`<span style="color:red;"> ${claimed.message}</span>`);
       await markBackupEmailPrompt();
       return;
     }
     saved.push("email");
+    emailNeedsConfirm = !!claimed.needsConfirmation;
   }
 
   if (needsUsername) {
@@ -270,8 +326,11 @@ async function promptAndSaveBackupEmail(currentStreak) {
   await client.auth.updateUser({ data: { backup_email_prompted_at: null } });
 
   if (saved.length) {
+    const confirmHint = emailNeedsConfirm
+      ? " Check your inbox to confirm email for magic link recovery"
+      : "";
     setStatus(
-      `<span style="color:green;"> Backup info saved (${saved.join(", ")}). Your progress is safe now ✅ </span>`
+      `<span style="color:green;"> Backup info saved (${saved.join(", ")}). Your progress is now safe ✅${confirmHint}</span>`
     );
   }
 }
