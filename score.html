@@ -186,6 +186,75 @@
       transform: scale(1) translateY(0);
     }
 
+    .score-faq-modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(15, 23, 42, 0.56);
+      backdrop-filter: blur(2px);
+      z-index: 1200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    
+    .score-faq-modal.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .score-faq-panel {
+      width: min(92vw, 540px);
+      max-height: 84vh;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #dbe0ea;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.25);
+      text-align: left;
+    }
+
+    .score-faq-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .score-faq-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+    
+    .score-faq-close {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 8px;
+      padding: 0.25rem 0.65rem;
+      font-size: 1rem;
+      width: auto;
+      height: auto;
+      line-height: 1.2;
+    }
+    
+    .score-faq-list {
+      margin: 0;
+      padding-left: 1.25rem;
+      line-height: 1.45;
+      color: #111827;
+    }
+    
+    .score-faq-list li + li {
+      margin-top: 0.55rem;
+    }
+
     .page-controls{
       display: flex;
       flex-direction: column;
@@ -432,6 +501,11 @@
       border-color: var(--brand-green-hover);
     }
 
+    #shareBtn:disabled {
+      background: #899499;
+      cursor: not-allowed;
+    }
+
     #scoreErrorBanner {
       margin-top: 10px;
       color: #b91c1c;
@@ -564,7 +638,7 @@
 </head>
 <body>
   <div class="page-controls">
-    <a href="index.html" class="menu-btn home-btn"> Home </a>
+    <a href="home.html" class="menu-btn home-btn"> Home </a>
   
     <nav class="top-nav">
       <a href="stats.html" class="menu-btn"> My Stats </a>
@@ -578,6 +652,7 @@
         <button id="modeHourlyBtn" type="button" class="mode-switch-btn" aria-pressed="false"> Hourly </button>
       </div>
     </div>
+    <button id="scoreFaqBtn" type="button" class="menu-btn"> Score FAQ </button>
   </div>
 
   <h1> My Score </h1>
@@ -599,6 +674,27 @@
     <button id="shareBtn"> Share </button>
   </div>
   <div id="scoreErrorBanner"></div>
+
+  <div id="scoreFaqModal" class="score-faq-modal" aria-hidden="true" aria-labelledby="scoreFaqTitle">
+    <div class="score-faq-panel" role="dialog" aria-modal="true">
+      <div class="score-faq-header">
+        <h2 id="scoreFaqTitle" class="score-faq-title">Score FAQ</h2>
+        <button id="scoreFaqClose" class="score-faq-close" type="button" aria-label="Close score FAQ">✕</button>
+      </div>
+      <ul class="score-faq-list">
+        <li><strong>Daily Score</strong> Earn points for each high/low forecast based on accuracy compared to actual temps</li>
+        <li><strong>Green (🟢)</strong> Perfect or awesome forecast (error of 0-1 degrees)</li>
+        <li><strong>Yellow (🟡)</strong> Good or mid forecast (error of 2-3)</li>
+        <li><strong>Red (🔴)</strong> Poor or bad forecast (error of >=4)</li>
+        <li><strong>Coins (🪙)</strong> Earn 10🪙 for error of 0, 7🪙 for error of 1, 4🪙 for error of 2, 1🪙 for error of 3, 0🪙 for error of >=4</li>
+        <li><strong>Mood (💗)</strong> Earn +2💗 for error of 0 = +2💗, +1💗 for error of 1, -1💗 for error of >=4</li>
+        <li><strong>Hourly Mode</strong> See your hourly scores. Earn 2🪙 for error of 0, 1🪙 for error of 1</li>
+        <li><strong>Share </strong> copies the score summary for you to easily share on social media or wherever</li>
+        <li>Is my score good? What's a good score? <br> Generally, a score of 4🪙 for a forecast is considered good. A total daily score of 12🪙 or more is very good.
+        Making more forecasts across more cities should boost your total 🪙 earned, helping you reach the top of the leaderboard.</li>
+      </ul>
+    </div>
+  </div>
   
 <script>
 (() => {
@@ -635,6 +731,9 @@
   const streakEl = document.getElementById("currentStreak");
   const cityCirclesEl = document.getElementById("cityCircles");
   const shareBtn = document.getElementById("shareBtn");
+  const scoreFaqBtn = document.getElementById("scoreFaqBtn");
+  const scoreFaqModal = document.getElementById("scoreFaqModal");
+  const scoreFaqClose = document.getElementById("scoreFaqClose");
 
   let currentUserId = null;
   let activeMode = "daily";
@@ -676,6 +775,36 @@
     scoreRatioEl.style.display = isDailyMode && hasText ? "block" : "none";
   }
 
+  function openScoreFaqModal() {
+    if (!scoreFaqModal) return;
+    scoreFaqModal.classList.add("is-open");
+    scoreFaqModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeScoreFaqModal() {
+    if (!scoreFaqModal) return;
+    scoreFaqModal.classList.remove("is-open");
+    scoreFaqModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  function setShareEnabled(canShare, reason = "No score due to no forecasts") {
+    if (!shareBtn) return;
+  
+    shareBtn.disabled = !canShare;
+    shareBtn.title = canShare ? "Copy my score" : "No score to copy";
+    shareBtn.style.opacity = canShare ? "" : "0.5";
+    shareBtn.style.cursor = canShare ? "pointer" : "not-allowed";
+  
+    if (!canShare) {  // show message under button
+      showShareStatus(reason, "error");
+    } else {
+      const status = document.getElementById("shareStatus");
+      if (status) status.textContent = "";
+    }
+  }
+  
   function hasValue(v) {
     return v !== null && v !== undefined && v !== "";
   }
@@ -1164,10 +1293,16 @@
       status.style.minHeight = "18px";
       shareBtn.insertAdjacentElement("afterend", status);
     }
+  
     status.style.color = type === "error" ? "#b91c1c" : "#166534";
     status.textContent = msg;
+  
     clearTimeout(shareTimer);
-    shareTimer = setTimeout(() => (status.textContent = ""), 2000);
+    shareTimer = setTimeout(() => {
+      status.textContent = "";
+    }, 5000);
+  
+    return status;
   }
 
   function showManualShareFallback(text) {
@@ -1219,36 +1354,44 @@
 
   function buildShare(scores, totalCoins, totalMood, currentStreak, shareSummary = null) {
     if (!shareBtn) return;
-  
+
     const formatShareDate = (label) => {  // format date as DD MM
       const s = String(label || "").trim();
       const m = s.match(/^([A-Za-z]{3,9})\s+(\d{1,2})$/);
       if (m) return `${m[2]} ${m[1]}`;
       return s;
     };
-  
+
+    const rows = Array.isArray(scores) ? scores : [];
+    const cityIds = Array.isArray(CITY_ORDER) && CITY_ORDER.length
+      ? CITY_ORDER
+      : rows.map((r) => r?.city_id).filter((v, i, a) => v != null && a.indexOf(v) === i);
+
+    const circlesByCity = cityIds.map((cityId) =>
+      resultCircle(rows.find((r) => Number(r?.city_id) === Number(cityId)) || {})
+    );
+
+    const allSkipped = circlesByCity.length === 0 || circlesByCity.every((c) => c === "⚪");
+    setShareEnabled(!allSkipped, "No daily forecasts submitted for yesterday");
+
+    if (allSkipped) {
+      shareBtn.onclick = null;
+      return;
+    }
+
+    const successCount = shareSummary?.successCount ?? circlesByCity.filter((c) => c === "🟢" || c === "🟡").length;
+    const totalCount = shareSummary?.totalCount ?? circlesByCity.length;
+    const circles = circlesByCity.join(" ");
+
+    const dateLine = `${formatShareDate(ydayLabel)}    ${successCount}/${totalCount}`;
+    const text = [
+      "Temps With Friends",
+      dateLine,
+      circles,
+      `🪙 ${totalCoins} 💗 ${formatSignedNumber(totalMood)} ⭐ ${currentStreak}`,
+    ].join("\n\n");
+
     shareBtn.onclick = async () => {
-      const rows = Array.isArray(scores) ? scores : [];
-      const cityIds = Array.isArray(CITY_ORDER) && CITY_ORDER.length
-        ? CITY_ORDER
-        : rows.map((r) => r?.city_id).filter((v, i, a) => v != null && a.indexOf(v) === i);
-  
-      const circlesByCity = cityIds.map((cityId) =>
-        resultCircle(rows.find((r) => Number(r?.city_id) === Number(cityId)) || {})
-      );
-  
-      const successCount = shareSummary?.successCount ?? circlesByCity.filter((c) => c === "🟢" || c === "🟡").length;
-      const totalCount = shareSummary?.totalCount ?? circlesByCity.length;
-      const circles = circlesByCity.join(" ");
-  
-      const dateLine = `${formatShareDate(ydayLabel)}    ${successCount}/${totalCount}`;
-      const text = [
-        "Temps With Friends",
-        dateLine,
-        circles,
-        `🪙 ${totalCoins} 💗 ${formatSignedNumber(totalMood)} ⭐ ${currentStreak}`,
-      ].join("\n\n");
-  
       const ok = await copyText(text);
       if (ok) {
         showShareStatus("✅ Score copied!");
@@ -1536,6 +1679,18 @@
     if (modeDailyBtn) modeDailyBtn.addEventListener("click", () => setMode("daily"));
     if (modeHourlyBtn) modeHourlyBtn.addEventListener("click", () => setMode("hourly"));
 
+    if (scoreFaqBtn) scoreFaqBtn.addEventListener("click", openScoreFaqModal);
+    if (scoreFaqClose) scoreFaqClose.addEventListener("click", closeScoreFaqModal);
+    if (scoreFaqModal) {
+      scoreFaqModal.addEventListener("click", (e) => {
+        if (e.target === scoreFaqModal) closeScoreFaqModal();
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && scoreFaqModal && scoreFaqModal.classList.contains("is-open")) {
+        closeScoreFaqModal();
+      }
+    });
     setMode(getInitialMode());
   }
 
