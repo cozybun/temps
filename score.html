@@ -502,8 +502,12 @@
     }
 
     #shareBtn:disabled {
-      background: #899499;
+      background: #899499 !important;
+      border-color: #899499 !important;
+      color: #FFFFFF !important;
+      opacity: 0.5 !important;
       cursor: not-allowed;
+      filter: none;
     }
 
     #scoreErrorBanner {
@@ -511,6 +515,14 @@
       color: #b91c1c;
       min-height: 20px;
       font-size: 14px;
+    }
+    
+    #shareStatus {
+      margin-top: 8px;
+      font-size: 14px;
+      min-height: 18px;
+      width: 100%;
+      text-align: center;
     }
     
     /* Centered view for all auth-missing paths */
@@ -672,6 +684,7 @@
     <div id="cityCircles"> ⚪ ⚪ ⚪ </div>
     <div id="scoreRatio" class="score-ratio" aria-live="polite"></div>
     <button id="shareBtn"> Share </button>
+    <div id="shareStatus" aria-live="polite"></div>
   </div>
   <div id="scoreErrorBanner"></div>
 
@@ -792,16 +805,14 @@
   function setShareEnabled(canShare, reason = "No score due to no forecasts") {
     if (!shareBtn) return;
   
+    const disabledReason = reason && reason.trim() ? reason : "No score to copy";
     shareBtn.disabled = !canShare;
-    shareBtn.title = canShare ? "Copy my score" : "No score to copy";
-    shareBtn.style.opacity = canShare ? "" : "0.5";
-    shareBtn.style.cursor = canShare ? "pointer" : "not-allowed";
+    shareBtn.title = canShare ? "Copy my score" : disabledReason;
   
-    if (!canShare) {  // show message under button
-      showShareStatus(reason, "error");
+    if (!canShare) {  // show message below button
+      showShareStatus(disabledReason, "error");
     } else {
-      const status = document.getElementById("shareStatus");
-      if (status) status.textContent = "";
+      showShareStatus("", "ok");
     }
   }
   
@@ -1282,25 +1293,21 @@
 
     scoreListEl.appendChild(wrapper);
   }
-
+  
   function showShareStatus(msg, type = "ok") {
-    let status = document.getElementById("shareStatus");
-    if (!status) {
-      status = document.createElement("div");
-      status.id = "shareStatus";
-      status.style.marginTop = "8px";
-      status.style.fontSize = "13px";
-      status.style.minHeight = "18px";
-      shareBtn.insertAdjacentElement("afterend", status);
-    }
+    const status = document.getElementById("shareStatus");
+    if (!status) return null;
   
     status.style.color = type === "error" ? "#b91c1c" : "#166534";
-    status.textContent = msg;
+    status.textContent = msg || "";
   
     clearTimeout(shareTimer);
-    shareTimer = setTimeout(() => {
-      status.textContent = "";
-    }, 5000);
+  
+    if (msg && type !== "error") {  // keep error message visible until state changes, auto-clear only non-errors
+      shareTimer = setTimeout(() => {
+        status.textContent = "";
+      }, 5000);
+    }
   
     return status;
   }
