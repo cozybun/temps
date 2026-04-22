@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --brand-blue: #4169E1;
+      --blue-dark: #3556CA;
+      --text: #000000;
+      --ok: #15803d;
+      --bad: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      padding: 1rem;
+    }
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .restore-wrap {
+      margin-top: 1.5rem;
+    }
+    #restore-btn {
+      background: var(--blue);
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      padding: 0.85rem 1.2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      max-width: 220px;
+    }
+    #restore-btn:hover { background: var(--blue-dark); }
+    #restore-panel {
+      margin-top: 0.85rem;
+      display: none;
+      border: 1px solid #dbeafe;
+      background: #f8fbff;
+      padding: 0.9rem;
+      border-radius: 10px;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .row input {
+      flex: 1;
+      min-width: 220px;
+      padding: 0.75rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .row button {
+      padding: 0.75rem 1rem;
+      border: 0;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      cursor: pointer;
+    }
+    #restore-status {
+      margin-top: 0.75rem;
+      min-height: 1.2rem;
+    }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .muted { color: var(--subtle); }
+    @media (max-width: 420px) {
+      #restore-btn { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="restore-wrap">
+      <button id="restore-btn" type="button"> Restore My Account </button>
+
+      <div id="restore-panel">
+        <div class="row">
+          <input id="restore-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          <button id="send-restore" type="button"> Send recovery link </button>
+        </div>
+      </div>
+
+      <div id="restore-status" class="muted" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
+    const SUPABASE_PUB_KEY = "sb_publishable_lQ27fzzwJf27dUWPEW8UQA_NTY7naO6";
+    if (!window.__supabase_client) {
+      window.__supabase_client = supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
+    }
+    const client = window.__supabase_client;
+
+    const restoreBtn = document.getElementById("restore-btn");
+    const restorePanel = document.getElementById("restore-panel");
+    const emailInput = document.getElementById("restore-email");
+    const sendRestoreBtn = document.getElementById("send-restore");
+    const restoreStatus = document.getElementById("restore-status");
+
+    function setStatus(msg, tone = "muted") {
+      restoreStatus.className = tone;
+      restoreStatus.textContent = msg || "";
+    }
+
+    function isRecoveryRedirect() {
+      return (
+        window.location.hash.includes("access_token=") ||
+        window.location.hash.includes("refresh_token=") ||
+        window.location.search.includes("code=")
+      );
+    }
+
+    async function handleRecoveryCallback() {
+      if (!isRecoveryRedirect()) return;
+
+      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+      if (error) {
+        setStatus("Cannot complete sign-in from your link. Please try again.", "bad");
+        return;
+      }
+
+      const user = data?.session?.user;
+      if (!user) {
+        setStatus("No active session found. Click the latest link again.", "bad");
+        return;
+      }
+
+      if (window.history && window.history.replaceState) {  // clean URL after success
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      restorePanel.style.display = "none";
+      restoreBtn.style.display = "none";
+      const restoredName =
+        user?.user_metadata?.display_name ||
+        user?.user_metadata?.username ||
+        user.email;
+
+      setStatus(`Welcome back, ${restoredName}! Your account is restored.`, "ok");
+    }
+
+    restoreBtn.addEventListener("click", () => {
+      setStatus("");
+      restorePanel.style.display = restorePanel.style.display === "none" ? "block" : "none";
+      if (restorePanel.style.display === "block") emailInput.focus();
+    });
+
+    sendRestoreBtn.addEventListener("click", async () => {
+      const email = String(emailInput.value || "").trim().toLowerCase();
+      if (!email) {
+        setStatus("Please enter your backup email:", "bad");
+        return;
+      }
+
+      sendRestoreBtn.disabled = true;
+      setStatus("Checking email...", "muted");
+
+      try {  // explicitly check auth.users via SQL function
+        const { data: exists, error: checkErr } = await supabase.rpc("has_auth_email", {
+          p_email: email
+        });
+
+        if (checkErr) {
+          setStatus(`Could not verify account: ${checkErr.message}`, "bad");
+          return;
+        }
+
+        if (!exists) {
+          setStatus(
+            "No account found with that email. Please try another email or create a new account by saving forecasts.",
+            "bad"
+          );
+          return;
+        }
+
+        const { error: otpErr } = await supabase.auth.signInWithOtp({  // send recovery magic link to email
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/home.html`
+          }
+        });
+
+        if (otpErr) {
+          setStatus(`Could not send recovery link: ${otpErr.message}`, "bad");
+          return;
+        }
+
+        setStatus("Recovery link sent to email. Check your inbox (and spam).", "ok");
+      } catch (e) {
+        setStatus("Something went wrong. Please try again.", "bad");
+      } finally {
+        sendRestoreBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", handleRecoveryCallback);  // handle user returning from magic link
+  </script>
+</body>
+</html>
