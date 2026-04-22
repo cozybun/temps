@@ -217,31 +217,34 @@
       box-shadow: 0 18px 36px rgba(15, 23, 42, 0.25);
       text-align: left;
     }
-
+    
     .score-faq-header {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 0.75rem;
       margin-bottom: 0.75rem;
     }
     
     .score-faq-title {
+      grid-column: 2;
       margin: 0;
+      text-align: center;
       font-size: 1.35rem;
       font-weight: 700;
     }
     
     .score-faq-close {
-      border: 1px solid #cbd5e1;
-      background: #f8fafc;
-      color: #0f172a;
+      border: 1px solid var(--brand-blue);
+      background: var(--brand-blue);
+      color: #FFFFFF;
       border-radius: 8px;
-      padding: 0.25rem 0.65rem;
+      padding: 0.25rem 0.6rem;
       font-size: 1rem;
       width: auto;
       height: auto;
       line-height: 1.2;
+      grid-column: 3;
+      justify-self: end;
     }
     
     .score-faq-list {
@@ -249,6 +252,7 @@
       padding-left: 1.25rem;
       line-height: 1.45;
       color: #111827;
+      text-align: justify;
     }
     
     .score-faq-list li + li {
@@ -490,6 +494,17 @@
       letter-spacing: 0.2px;
     }
 
+    .score-faq-btn {
+      background: var(--brand-blue);
+      border-color: var(--brand-blue);
+      color: var(--brand-text-on-dark);
+    }
+    
+    .score-faq-btn:hover {
+      background: var(--brand-blue-hover);
+      border-color: var(--brand-blue-hover);
+    }
+    
     #shareBtn {
       background: var(--brand-green);
       border-color: var(--brand-green);
@@ -664,7 +679,7 @@
         <button id="modeHourlyBtn" type="button" class="mode-switch-btn" aria-pressed="false"> Hourly </button>
       </div>
     </div>
-    <button id="scoreFaqBtn" type="button" class="menu-btn"> Score FAQ </button>
+    <button id="scoreFaqBtn" type="button" class="menu-btn score-faq-btn"> Score FAQ </button>
   </div>
 
   <h1> My Score </h1>
@@ -700,11 +715,12 @@
         <li><strong>Yellow (🟡)</strong> Good or mid forecast (error of 2-3)</li>
         <li><strong>Red (🔴)</strong> Poor or bad forecast (error of >=4)</li>
         <li><strong>Coins (🪙)</strong> Earn 10🪙 for error of 0, 7🪙 for error of 1, 4🪙 for error of 2, 1🪙 for error of 3, 0🪙 for error of >=4</li>
-        <li><strong>Mood (💗)</strong> Earn +2💗 for error of 0 = +2💗, +1💗 for error of 1, -1💗 for error of >=4</li>
+        <li><strong>Mood (💗)</strong> Earn +2💗 for error of 0, +1💗 for error of 1, -1💗 for error of >=4</li>
         <li><strong>Hourly Mode</strong> See your hourly scores. Earn 2🪙 for error of 0, 1🪙 for error of 1</li>
-        <li><strong>Share </strong> copies the score summary for you to easily share on social media or wherever</li>
-        <li>Is my score good? What's a good score? <br> Generally, a score of 4🪙 for a forecast is considered good. A total daily score of 12🪙 or more is very good.
-        Making more forecasts across more cities should boost your total 🪙 earned, helping you reach the top of the leaderboard.</li>
+        <li><strong>Share</strong> copies the score summary for you to easily share on social media or wherever</li>
+        <li><strong>Is my score good? What's a good score?</strong> <br>
+          Generally, a score of 4🪙 for a forecast is considered good. A total daily score of 12🪙 or more is very good. <br>
+          Making more forecasts across more cities should boost your total 🪙 earned, helping you reach the top of the leaderboard.</li>
       </ul>
     </div>
   </div>
@@ -1113,7 +1129,7 @@
     scoreListEl.innerHTML = "";
 
     if (!items.length) {
-      scoreListEl.innerHTML = '<p class="hourly-empty"> No hourly scores yet </p>';
+      scoreListEl.innerHTML = '<p class="hourly-empty"> No hourly scores yet. Keep forecasting & check back. </p>';
       return;
     }
 
@@ -1303,7 +1319,7 @@
   
     clearTimeout(shareTimer);
   
-    if (msg && type !== "error") {  // keep error message visible until state changes, auto-clear only non-errors
+    if (msg) {
       shareTimer = setTimeout(() => {
         status.textContent = "";
       }, 5000);
@@ -1379,7 +1395,7 @@
     );
 
     const allSkipped = circlesByCity.length === 0 || circlesByCity.every((c) => c === "⚪");
-    setShareEnabled(!allSkipped, "No daily forecasts submitted for yesterday");
+    setShareEnabled(!allSkipped);
 
     if (allSkipped) {
       shareBtn.onclick = null;
@@ -1550,7 +1566,7 @@
     }
 
     if (!scores || scores.length === 0) {
-      scoreListEl.innerHTML = `<p class="msg no-score-msg">No ${isHourly ? "hourly" : "daily"} score yet. <br> Keep forecasting & check back.</p>`;
+      scoreListEl.innerHTML = `<p class="msg no-score-msg"> No ${isHourly ? "hourly" : "daily"} score yet. <br> Keep forecasting & check back. </p>`;
 
       if (isHourly) {
         if (moodTotalEl) moodTotalEl.textContent = "—";
