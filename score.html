@@ -1113,7 +1113,7 @@
     scoreListEl.innerHTML = "";
 
     if (!items.length) {
-      scoreListEl.innerHTML = '<p class="hourly-empty">No hourly scores yet.</p>';
+      scoreListEl.innerHTML = '<p class="hourly-empty"> No hourly scores yet </p>';
       return;
     }
 
@@ -1550,7 +1550,7 @@
     }
 
     if (!scores || scores.length === 0) {
-      scoreListEl.innerHTML = `<p class="msg no-score-msg">No ${isHourly ? "hourly" : "daily"} score yet. Stay tuned & keep forecasting.</p>`;
+      scoreListEl.innerHTML = `<p class="msg no-score-msg">No ${isHourly ? "hourly" : "daily"} score yet. <br> Keep forecasting & check back.</p>`;
 
       if (isHourly) {
         if (moodTotalEl) moodTotalEl.textContent = "—";
