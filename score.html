@@ -1429,21 +1429,28 @@
       `🪙 ${totalCoins} 💗 ${formatSignedNumber(totalMood)} ⭐ ${currentStreak}`,
     ];
     
-    const visibleLines = shareLines.filter((line) => line.trim() !== "");
-    const maxLen = Math.max(...visibleLines.map((line) => Array.from(line).length, 1));
+    const getVisualLen = (s) => {   // inline width helper
+      const chars = Array.from(s);
+      return chars.reduce((len, ch) => {
+        const cp = ch.codePointAt(0);
+        const isWide =
+          (cp >= 0x1F300 && cp <= 0x1FAFF) ||  // many emoji/symbols
+          (cp >= 0x2600 && cp <= 0x27BF) ||  // misc symbols
+          (cp >= 0x1D400 && cp <= 0x1F9FF);  // broad emoji-ish range fallback
+        return len + (isWide ? 2 : 1);
+      }, 0);
+    };
+    
+    const maxLen = Math.max(
+      1,
+      ...shareLines.filter((l) => l.trim()).map((l) => getVisualLen(l))
+    );
     
     const centeredText = shareLines
       .map((line) => {
-        const raw = String(line ?? "");
-        const len = Array.from(raw).length;
-        if (!raw.trim()) return "";
-    
-        const padTotal = Math.max(0, maxLen - len);
-        const left = Math.floor(padTotal / 2);
-        const right = padTotal - left;
-        const nbsp = "\u00A0";  // non-breaking space for copy paste stability
-    
-        return `${nbsp.repeat(left)}${raw}${nbsp.repeat(right)}`;
+        if (!line.trim()) return "";
+        const pad = Math.max(0, Math.floor((maxLen - getVisualLen(line)) / 2));
+        return "\u2007".repeat(pad) + line;  // left-only padding
       })
       .join("\n");
 
