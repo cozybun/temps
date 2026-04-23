@@ -1388,81 +1388,158 @@
     }
   }
 
-  function buildShare(scores, totalCoins, totalMood, currentStreak, shareSummary = null) {
+  function buildShare(scores = [], totalCoins = 0, totalMood = 0, currentStreak = 0, shareSummary = null) {
     if (!shareBtn) return;
-  
+
+    const toNumber = (v, fallback = 0) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    };
+
+    const formatSignedNumber = (v) => {
+        const n = toNumber(v, 0);
+        return n > 0 ? `+${n}` : `${n}`;
+    };
+
     const formatShareDate = (label) => {
-      const s = String(label || "").trim();
-      const m = s.match(/^([A-Za-z]{3,9})\s+(\d{1,2})$/);
-      if (m) return `${m[2]} ${m[1]}`;
-      return s;
+        const s = String(label || "").trim();
+        const m = s.match(/^([A-Za-z]{3,9})\s+(\d{1,2})$/);
+        return m ? `${m[2]} ${m[1]}` : s;
     };
-  
+
     const rows = Array.isArray(scores) ? scores : [];
-    const cityIds = Array.isArray(CITY_ORDER) && CITY_ORDER.length
-      ? CITY_ORDER
-      : rows.map((r) => r?.city_id).filter((v, i, a) => v != null && a.indexOf(v) === i);
-  
-    const circlesByCity = cityIds.map((cityId) =>
-      resultCircle(rows.find((r) => Number(r?.city_id) === Number(cityId)) || {})
-    );
-  
-    const allSkipped = circlesByCity.length === 0 || circlesByCity.every((c) => c === "⚪");
-    setShareEnabled(!allSkipped);
-  
-    if (allSkipped) {
-      shareBtn.onclick = null;
-      return;
+
+    let cityIds = [];  // keep existing order if available, otherwise preserve first-seen order from scores
+    if (Array.isArray(CITY_ORDER) && CITY_ORDER.length) {
+        cityIds = CITY_ORDER.slice();
+    } else {
+        const seen = new Set();
+        for (const row of rows) {
+            const id = row?.city_id;
+            if (id == null || seen.has(id)) continue;
+            seen.add(id);
+            cityIds.push(id);
+        }
     }
-  
-    const successCount = shareSummary?.successCount ?? circlesByCity.filter((c) => c === "🟢" || c === "🟡").length;
-    const totalCount = shareSummary?.totalCount ?? circlesByCity.length;
+
+    const circlesByCity = cityIds.map((cityId) => {
+        const row = rows.find((r) => Number(r?.city_id) === Number(cityId)) || {};
+        return typeof resultCircle === "function" ? resultCircle(row) : "";
+    });
+
+    const allSkipped =
+        circlesByCity.length === 0 ||
+        circlesByCity.every((c) => c === "⚪" || c === "" || c == null);
+
+    if (typeof setShareEnabled === "function") {
+        setShareEnabled(!allSkipped);
+    }
+
+    if (allSkipped) {
+        shareBtn.onclick = null;
+        return;
+    }
+
+    const successCount = toNumber(
+        shareSummary?.successCount,
+        circlesByCity.filter((c) => c === "🟢" || c === "🟡").length
+    );
+    const totalCount = toNumber(shareSummary?.totalCount, circlesByCity.length);
+
     const circles = circlesByCity.join(" ");
-  
     const dateLine = `${formatShareDate(ydayLabel)}    ${successCount}/${totalCount}`;
-    
-    const statsLine = `🪙 ${totalCoins}  💗 ${formatSignedNumber(totalMood)}  ⭐ ${currentStreak}`;
-  
-    const lines = [  // build lines with metadata for centering logic
-      { text: "Temps With Friends", isHeader: true },
-      { text: "", isSpace: true },
-      { text: dateLine, isDate: true },
-      { text: "", isSpace: true },
-      { text: circles, isCircles: true },
-      { text: "", isSpace: true },
-      { text: statsLine, isStats: true },
+    const statsLine = `🪙 ${toNumber(totalCoins, 0)}  💗 ${formatSignedNumber(totalMood)}  ⭐ ${toNumber(currentStreak, 0)}`;
+
+    const buildWidthFn = (() => {  // emoji-aware visual width estimator (fallback to naive for older browsers)
+        const segmenter =
+            typeof Intl !== "undefined" && "Segmenter" in Intl
+                ? new Intl.Segmenter("en", { granularity: "grapheme" })
+                : null;
+
+        const isEmoji = (seg) => /\p{Extended_Pictographic}/u.test(seg);
+
+        if (!segmenter) {
+            return (s) => {
+                let w = 0;
+                for (const ch of String(s)) {
+                    const cp = ch.codePointAt(0);
+                    w += (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x2600 && cp <= 0x27bf) ? 2 : 1;
+                }
+                return w;
+            };
+        }
+
+        return (s) => {
+            let w = 0;
+            for (const { segment } of segmenter.segment(String(s))) {
+                if (!segment) continue;
+                if (segment === " ") {
+                    w += 1;
+                } else if (isEmoji(segment)) {
+                    w += 2;
+                } else {
+                    w += 1;
+                }
+            }
+            return w;
+        };
+    })();
+
+    const lines = [
+        { text: "Temps With Friends", isSpace: false },
+        { text: "", isSpace: true },
+        { text: dateLine, isSpace: false },
+        { text: "", isSpace: true },
+        { text: circles, isSpace: false },
+        { text: "", isSpace: true },
+        { text: statsLine, isSpace: false },
     ];
-  
-    const getVisualWidth = (s) => {  // compute visual width accounting for emoji being 2 chars wide on most platforms
-      let width = 0;
-      for (const char of s) {
-        const code = char.codePointAt(0);
-        if (code > 0x2000) width += 2;
-        else width += 1;
-      }
-      return width;
+
+    const contentLines = lines.filter((l) => !l.isSpace);
+    const maxWidth = Math.max(...contentLines.map((l) => buildWidthFn(l.text)));
+
+    const centeredText = lines
+        .map((line) => {
+            if (line.isSpace) return "";
+            const pad = Math.max(0, Math.floor((maxWidth - buildWidthFn(line.text)) / 2));
+            return " ".repeat(pad) + line.text;
+        })
+        .join("\n");
+
+    const showMonospaceFallback = (text) => {
+        if (typeof showManualShareFallback === "function") {
+            try {
+                showManualShareFallback(text);
+
+                const existing =  // style existing fallback text area
+                    document.querySelector("#share-fallback textarea") ||
+                    document.querySelector(".share-fallback textarea");
+                if (existing) {
+                    existing.style.fontFamily =
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+                }
+                return;
+            } catch {}  // fall through to inline fallback
+        }
+
+        const box = document.createElement("textarea");  // safe fallback if existing helper not in this scope
+        box.value = text;
+        box.readOnly = true;
+        box.rows = 9;
+        box.className = "w-full p-2 border rounded-md";
+        box.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+        box.style.whiteSpace = "pre";
+        box.style.resize = "vertical";
+
+        document.body.appendChild(box);
+        box.focus();
+        box.select();
     };
-  
-    const contentLines = lines.filter((l) => !l.isSpace);  // find the longest line (excluding empty lines)
-    const maxWidth = Math.max(...contentLines.map((l) => getVisualWidth(l.text)));
-  
-    const centered = lines.map((line) => {  // center each line using spaces
-      if (line.isSpace) return "";
-      
-      const width = getVisualWidth(line.text);
-      const padding = Math.max(0, Math.floor((maxWidth - width) / 2));
-      
-      return " ".repeat(padding) + line.text;  // use regular spaces for padding (most reliable cross-platform)
-    }).join("\n");
-  
+
     shareBtn.onclick = async () => {
-      const ok = await copyText(centered);
-      if (ok) {
-        showShareStatus("✅ Score copied!");
-      } else {
-        showShareStatus("⚠️ Clipboard is blocked here. Use text box below.", "error");
-        showManualShareFallback(centered);
-      }
+        const ok = await copyText(centeredText);
+        if (typeof showShareStatus === "function") { showShareStatus(ok ? "✅ Score copied!" : "⚠️ Clipboard blocked here. Use text box below.", ok ? "ok" : "error"); }
+        if (!ok) showMonospaceFallback(centeredText);
     };
   }
 
