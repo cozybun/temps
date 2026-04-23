@@ -2174,11 +2174,11 @@ async function handleHourlySubmit(e) {
   }
 }
 
-function initRevealBtn() {
-  const revealBtn = document.getElementById("revealBtn");
-  if (!revealBtn) return;
+function initScoreBtn() {
+  const scoreBtn = document.getElementById("scoreBtn");
+  if (!scoreBtn) return;
 
-  revealBtn.addEventListener("click", () => {
+  scoreBtn.addEventListener("click", () => {
     window.location.href = `score?mode=${isHourlyPage ? 'hourly' : 'daily'}`;
   });
 }
@@ -2211,7 +2211,7 @@ function initBindings() {
     hourlyForm.addEventListener("submit", handleHourlySubmit);
   }
 
-  initRevealBtn();
+  initScoreBtn();
 }
 
 function initDailyHelpModal() {
