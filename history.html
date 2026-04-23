@@ -515,8 +515,8 @@
                 <th data-sort="actual" data-label="Actual"> Actual <span class="sort-arrow"></span></th>
                 <th data-sort="accuracy" data-label="Accuracy (Error)" class="accuracy-col"> Accuracy (Error) <span class="sort-arrow"></span></th>
                 <th data-sort="color" data-label="Color" class="color-col mode-daily-col"> Color Score <span class="sort-arrow"></span></th>
-                <th data-sort="coins" data-label="Coins" class="coins-col"> Coins <span class="sort-arrow"></span></th>
-                <th data-sort="mood" data-label="Mood" class="mood-col mode-daily-col"> Mood <span class="sort-arrow"></span></th>
+                <th data-sort="coins" data-label="Coins" class="coins-col"> Coins 🪙 <span class="sort-arrow"></span></th>
+                <th data-sort="mood" data-label="Mood" class="mood-col mode-daily-col"> Mood 💗 <span class="sort-arrow"></span></th>
               </tr>
             </thead>
             <tbody id="historyBody"></tbody>
@@ -604,9 +604,7 @@
       mood: "desc"
     };
 
-    const MONTH_NAMES = [
-      "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"
-    ];
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 
     const state = {
       mode: "daily",
@@ -701,6 +699,13 @@
       const n = toNumber(v);
       if (n === null) return "—";
       return `${Math.abs(Math.round(n))}°`;
+    }
+
+    function formatMoodValue(v) {
+      const n = toNumber(v);
+      if (n === null) return "0";
+      const rounded = Math.round(n);
+      return rounded > 0 ? `+${rounded}` : `${rounded}`;
     }
 
     function formatRange(row, isForecast = true) {
@@ -851,7 +856,7 @@
       const hourInfo = typeof hourParser === "function" ? hourParser(row.hour) : null;
       if (!hourInfo) return `${dateText} ET`;
     
-      return `${dateText}, ${formatHourLabel(hourInfo.hour)} ET${hourInfo.isSixHourHigh ? " 6-hr high" : ""}`;
+      return `${dateText}, \t${formatHourLabel(hourInfo.hour)} ET${hourInfo.isSixHourHigh ? " 6-hr high" : ""}`;
     }
 
     function accuracyColor(value) {
@@ -999,10 +1004,12 @@
         }
 
         if (key === "mood") {
-          aV = (a.mood || "").toLowerCase();
-          bV = (b.mood || "").toLowerCase();
-          if (aV === bV) return 0;
-          return (aV > bV ? 1 : -1) * dir;
+          const aMoodRaw = toNumber(a.mood);
+          const bMoodRaw = toNumber(b.mood);
+          const aNum = aMoodRaw === null ? 0 : aMoodRaw;
+          const bNum = bMoodRaw === null ? 0 : bMoodRaw;
+          if (aNum === bNum) return 0;
+          return (aNum > bNum ? 1 : -1) * dir;
         }
 
         return 0;
@@ -1074,7 +1081,7 @@
             formatRange(row, true),
             formatRange(row, false),
             formatAccuracy(row),
-            row.mood || "",
+            state.mode === "daily" ? formatMoodValue(row.mood) : "",
             row.hour || "",
             toNumber(row.coins)
           ].join(" ").toLowerCase();
@@ -1173,7 +1180,7 @@
         if (state.mode === "daily") {
           const tdMood = document.createElement("td");
           tdMood.className = "mood-col";
-          tdMood.textContent = row.mood || "—";
+          tdMood.textContent = formatMoodValue(row.mood);
           tr.appendChild(tdMood);
         }
 
