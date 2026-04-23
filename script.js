@@ -2179,7 +2179,7 @@ function initRevealBtn() {
   if (!revealBtn) return;
 
   revealBtn.addEventListener("click", () => {
-    window.location.href = `score.html?mode=${isHourlyPage ? 'hourly' : 'daily'}`;
+    window.location.href = `score?mode=${isHourlyPage ? 'hourly' : 'daily'}`;
   });
 }
 
