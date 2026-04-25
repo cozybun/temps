@@ -7,13 +7,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --brand-blue: #4169E1;
-      --blue-dark: #3556CA;
+      --brand-blue: #4169e1;
+      --blue-dark: #3556ca;
       --text: #000000;
       --ok: #15803d;
       --bad: #b91c1c;
       --subtle: #64748b;
     }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -21,14 +22,16 @@
       color: var(--text);
       padding: 1rem;
     }
+
     .page {
       max-width: 680px;
       margin: 0 auto;
       padding: 1rem;
     }
 
-    .restore-wrap, .account-wrap {
+    .restore-wrap {
       margin-top: 1.5rem;
+      display: none;
     }
 
     #restore-btn {
@@ -45,19 +48,41 @@
       text-align: center;
       cursor: pointer;
     }
-    #restore-btn:hover { background: var(--blue-dark); }
+    #restore-btn:hover {
+      background: var(--blue-dark);
+    }
 
-    #restore-backdrop {
+    #restore-backdrop,
+    #account-backdrop {
       position: fixed;
       inset: 0;
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
       padding: 1rem;
       background: rgba(0, 0, 0, 0.45);
       z-index: 9999;
+      transition: opacity 0.18s ease;
     }
-    #restore-panel {
+
+    #restore-backdrop {
+      display: none;
+    }
+
+    #account-backdrop {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #account-backdrop.show {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #restore-panel,
+    #account-panel {
       width: min(92vw, 420px);
       background: #fff;
       border: 1px solid #dbeafe;
@@ -66,11 +91,24 @@
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
     }
 
+    #account-panel {
+      transform: translateY(8px);
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      transform-origin: top right;
+    }
+
+    #account-backdrop.show #account-panel {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
     .row {
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
     }
+
     .row input {
       flex: 1;
       min-width: 220px;
@@ -79,13 +117,18 @@
       border-radius: 8px;
       font-size: 1rem;
     }
+
     .row button {
       padding: 0.75rem 1rem;
       border: 0;
       border-radius: 8px;
-      background: #111827;
+      background: var(--brand-blue);
       color: #fff;
       cursor: pointer;
+    }
+
+    .row button:hover {
+      background: var(--blue-dark);
     }
 
     #restore-status,
@@ -96,26 +139,29 @@
     }
 
     .account-wrap {
-      border: 1px solid #dbeafe;
+      border: 0;
       border-radius: 10px;
       padding: 0.95rem;
       background: #fff;
-      display: none;
     }
+
     .account-wrap h3 {
       margin: 0 0 0.6rem 0;
       font-size: 1.1rem;
     }
+
     .field {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
       margin-top: 0.75rem;
     }
+
     .field label {
       font-size: 0.93rem;
       font-weight: 600;
     }
+
     .field input {
       width: 100%;
       padding: 0.75rem;
@@ -123,11 +169,62 @@
       border-radius: 8px;
       font-size: 1rem;
     }
+
     .account-actions {
       margin-top: 0.8rem;
       display: flex;
       justify-content: flex-end;
       gap: 0.5rem;
+    }
+
+    #save-account {
+      background: var(--brand-blue);
+      color: #fff;
+    }
+
+    #save-account:hover {
+      background: var(--blue-dark);
+    }
+
+    /* Floating tiny gear icon */
+    #open-account-settings {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 10001;
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 9999px;
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    #open-account-settings:hover {
+      transform: translateY(-1px);
+      background: #f8fafc;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.3);
+    }
+
+    #open-account-settings:active {
+      transform: scale(0.97);
+    }
+
+    #open-account-settings.show {
+      display: inline-flex;
+      animation: gearPop 0.22s ease-out;
+    }
+
+    @keyframes gearPop {
+      from { transform: scale(0.92) translateY(-4px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
     }
 
     .help {
@@ -140,36 +237,71 @@
     .bad { color: var(--bad); }
     .muted { color: var(--subtle); }
 
+    #close-restore,
+    #close-account-settings {
+      background: #334155;
+    }
+
+    #close-restore:hover,
+    #close-account-settings:hover {
+      background: #1e293b;
+    }
+
     @media (max-width: 420px) {
-      #restore-btn { max-width: 100%; }
+      #restore-btn {
+        max-width: 100%;
+      }
+      .account-actions {
+        flex-direction: column-reverse;
+      }
+      .account-actions button {
+        width: 100%;
+      }
+      #open-account-settings {
+        top: 10px;
+        right: 10px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="restore-wrap" id="restore-wrap">
-      <button id="restore-btn" type="button"> Restore My Account </button>
+      <button id="restore-btn" type="button">Restore My Account</button>
 
       <div id="restore-backdrop">
         <div id="restore-panel">
           <div class="row">
             <input id="restore-email" type="email" placeholder="you@example.com" autocomplete="email" />
-            <button id="send-restore" type="button"> Send recovery link </button>
+            <button id="send-restore" type="button">Send recovery link</button>
           </div>
           <div class="row" style="justify-content:flex-end; margin-top:0.6rem;">
-            <button id="close-restore" type="button" style="background:#334155;"> Close </button>
+            <button id="close-restore" type="button">Close</button>
           </div>
         </div>
       </div>
 
       <div id="restore-status" class="muted" aria-live="polite"></div>
     </div>
+  </div>
 
-    <div class="account-wrap" id="account-wrap" aria-live="polite">
-      <h3>Account Settings</h3>
+  <!-- Floating top-right settings gear -->
+  <button
+    id="open-account-settings"
+    type="button"
+    aria-label="Open account settings"
+    title="Account Settings"
+  >
+    ⚙️
+  </button>
+
+  <!-- Account settings popup -->
+  <div id="account-backdrop" aria-live="polite">
+    <div id="account-panel" class="account-wrap" role="dialog" aria-modal="true" aria-labelledby="account-title">
+      <h3 id="account-title">Account Settings</h3>
 
       <div class="field">
-        <label for="account-username"> Username </label>
+        <label for="account-username">Username</label>
         <input id="account-username" type="text" autocomplete="nickname" maxlength="20" placeholder="My username" />
       </div>
 
@@ -179,7 +311,8 @@
       </div>
 
       <div class="account-actions">
-        <button id="save-account" type="button" style="background:#0f172a;"> Save account </button>
+        <button id="close-account-settings" type="button"> Cancel </button>
+        <button id="save-account" type="button"> Save changes </button>
       </div>
 
       <p id="account-status" class="muted"></p>
@@ -205,11 +338,13 @@
     const restoreBackdrop = document.getElementById("restore-backdrop");
     const closeRestoreBtn = document.getElementById("close-restore");
 
-    const accountWrap = document.getElementById("account-wrap");
+    const settingsBtn = document.getElementById("open-account-settings");
+    const accountBackdrop = document.getElementById("account-backdrop");
     const accountUsername = document.getElementById("account-username");
     const accountEmail = document.getElementById("account-email");
     const saveAccountBtn = document.getElementById("save-account");
     const accountStatus = document.getElementById("account-status");
+    const closeAccountSettingsBtn = document.getElementById("close-account-settings");
 
     let currentUser = null;
     let originalProfile = { username: "", email: "" };
@@ -274,6 +409,30 @@
       restoreBackdrop.style.display = "none";
     }
 
+    function openAccountSettingsModal() {
+      setStatus(accountStatus, "", "muted");
+      accountBackdrop.classList.add("show");
+      accountBackdrop.style.pointerEvents = "auto";
+      requestAnimationFrame(() => {
+        const panel = document.getElementById("account-panel");
+        panel.style.opacity = 0;
+        panel.style.transform = "translateY(8px)";
+        requestAnimationFrame(() => {
+          panel.style.opacity = 1;
+          panel.style.transform = "translateY(0)";
+        });
+      });
+      accountUsername.focus();
+    }
+
+    function closeAccountSettingsModal() {
+      accountBackdrop.classList.remove("show");
+      accountBackdrop.style.pointerEvents = "none";
+      const panel = document.getElementById("account-panel");
+      panel.style.opacity = 0;
+      panel.style.transform = "translateY(8px)";
+    }
+
     function isRecoveryRedirect() {
       return (
         window.location.hash.includes("access_token=") ||
@@ -308,10 +467,7 @@
 
       accountUsername.value = username;
       accountEmail.value = email;
-      originalProfile = {
-        username: username,
-        email: email
-      };
+      originalProfile = { username, email };
     }
 
     async function syncAuthStateUI() {
@@ -320,12 +476,13 @@
 
       if (isAuthenticatedUser(user)) {
         restoreWrap.style.display = "none";
-        accountWrap.style.display = "block";
+        settingsBtn.classList.add("show");
         await loadAccountProfile(user);
       } else {
         restoreWrap.style.display = "block";
-        restoreBtn.style.display = "block";
-        accountWrap.style.display = "none";
+        settingsBtn.classList.remove("show");
+        settingsBtn.style.display = "none";
+        closeAccountSettingsModal();
       }
     }
 
@@ -387,13 +544,9 @@
       saveAccountBtn.disabled = true;
       setStatus(accountStatus, "Saving...", "muted");
 
-      try {  // sync username with display_name, update email in auth if changed
-        const updatePayload = {
-          data: { display_name: nextUsername }
-        };
-        if (changedEmail) {
-          updatePayload.email = nextEmail;
-        }
+      try {
+        const updatePayload = { data: { display_name: nextUsername } };
+        if (changedEmail) updatePayload.email = nextEmail;
 
         const { error: authErr } = await client.auth.updateUser(
           updatePayload,
@@ -401,14 +554,10 @@
         );
         if (authErr) throw new Error(`Auth update failed: ${authErr.message}`);
 
-        const { error: profileErr } = await client  // sync public.users.username and public.users.email
+        const { error: profileErr } = await client
           .from("users")
           .upsert(
-            {
-              id: currentUser.id,
-              username: nextUsername,
-              email: nextEmail
-            },
+            { id: currentUser.id, username: nextUsername, email: nextEmail },
             { onConflict: "id" }
           );
         if (profileErr) throw new Error(`Profile update failed: ${profileErr.message}`);
@@ -433,20 +582,28 @@
       if (e.target === restoreBackdrop) closeRestoreModal();
     });
 
+    settingsBtn.addEventListener("click", async () => {
+      await loadAccountProfile(currentUser);
+      openAccountSettingsModal();
+    });
+
+    closeAccountSettingsBtn.addEventListener("click", closeAccountSettingsModal);
+    accountBackdrop.addEventListener("click", (e) => {
+      if (e.target === accountBackdrop) closeAccountSettingsModal();
+    });
+
     sendRestoreBtn.addEventListener("click", async () => {
       const email = normalizeEmail(restoreEmail.value);
       if (!email) {
-        setStatus(restoreStatus, "Please enter your backup email:", "bad");
+        setStatus(restoreStatus, "Please enter your backup email.", "bad");
         return;
       }
 
       sendRestoreBtn.disabled = true;
       setStatus(restoreStatus, "Checking email...", "muted");
 
-      try {  // explicitly check auth.users via RPC
-        const { data: exists, error: checkErr } = await client.rpc("has_auth_email", {
-          p_email: email
-        });
+      try {
+        const { data: exists, error: checkErr } = await client.rpc("has_auth_email", { p_email: email });
 
         if (checkErr) {
           setStatus(restoreStatus, `Could not verify account: ${checkErr.message}`, "bad");
@@ -455,6 +612,7 @@
 
         if (!exists) {
           setStatus(
+            restoreStatus,
             "No account found with that email. Please try another email or create a new account by saving forecasts.",
             "bad"
           );
@@ -471,7 +629,7 @@
           return;
         }
 
-        setStatus("Recovery link sent to email. Check your inbox (and spam).", "ok");
+        setStatus(restoreStatus, "Recovery link sent to email. Check your inbox (and spam).", "ok");
       } catch (e) {
         setStatus(restoreStatus, "Something went wrong. Please try again.", "bad");
       } finally {
@@ -482,6 +640,7 @@
     saveAccountBtn.addEventListener("click", handleSaveAccount);
 
     document.addEventListener("DOMContentLoaded", async () => {
+      accountBackdrop.style.pointerEvents = "none";
       await handleRecoveryCallback();
       await syncAuthStateUI();
     });
