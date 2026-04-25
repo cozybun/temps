@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Home</title>
+  <title> Home </title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -148,6 +148,7 @@
     .account-wrap h3 {
       margin: 0 0 0.6rem 0;
       font-size: 1.1rem;
+      text-align: center;
     }
 
     .field {
@@ -177,16 +178,38 @@
       gap: 0.5rem;
     }
 
+    .account-actions button {
+      color: #fff;
+      font-weight: 700;
+    }
+
     #save-account {
       background: var(--brand-blue);
       color: #fff;
+      font-weight: 700;
     }
 
     #save-account:hover {
       background: var(--blue-dark);
     }
 
-    /* Floating tiny gear icon */
+    #close-restore,
+    #close-account-settings {
+      background: #334155;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    #close-restore:hover,
+    #close-account-settings:hover {
+      background: #1e293b;
+    }
+
+    #account-status {
+      margin-top: 0.6rem;
+    }
+
+    /* Floating gear icon */
     #open-account-settings {
       position: fixed;
       top: 12px;
@@ -237,16 +260,6 @@
     .bad { color: var(--bad); }
     .muted { color: var(--subtle); }
 
-    #close-restore,
-    #close-account-settings {
-      background: #334155;
-    }
-
-    #close-restore:hover,
-    #close-account-settings:hover {
-      background: #1e293b;
-    }
-
     @media (max-width: 420px) {
       #restore-btn {
         max-width: 100%;
@@ -267,16 +280,16 @@
 <body>
   <div class="page">
     <div class="restore-wrap" id="restore-wrap">
-      <button id="restore-btn" type="button">Restore My Account</button>
+      <button id="restore-btn" type="button"> Restore My Account </button>
 
       <div id="restore-backdrop">
         <div id="restore-panel">
           <div class="row">
             <input id="restore-email" type="email" placeholder="you@example.com" autocomplete="email" />
-            <button id="send-restore" type="button">Send recovery link</button>
+            <button id="send-restore" type="button"> Send recovery link </button>
           </div>
           <div class="row" style="justify-content:flex-end; margin-top:0.6rem;">
-            <button id="close-restore" type="button">Close</button>
+            <button id="close-restore" type="button"> Close </button>
           </div>
         </div>
       </div>
