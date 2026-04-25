@@ -12,6 +12,7 @@
       --text: #000000;
       --ok: #15803d;
       --bad: #b91c1c;
+      --subtle: #64748b;
     }
     * { box-sizing: border-box; }
     body {
@@ -25,10 +26,11 @@
       margin: 0 auto;
       padding: 1rem;
     }
-    .restore-wrap {
+
+    .restore-wrap, .account-wrap {
       margin-top: 1.5rem;
-      text-align: center;
     }
+
     #restore-btn {
       background: var(--brand-blue);
       color: #fff;
@@ -44,6 +46,7 @@
       cursor: pointer;
     }
     #restore-btn:hover { background: var(--blue-dark); }
+
     #restore-backdrop {
       position: fixed;
       inset: 0;
@@ -62,6 +65,7 @@
       padding: 0.9rem;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
     }
+
     .row {
       display: flex;
       gap: 0.5rem;
@@ -83,13 +87,59 @@
       color: #fff;
       cursor: pointer;
     }
-    #restore-status {
+
+    #restore-status,
+    #account-status {
       margin-top: 0.75rem;
       min-height: 1.2rem;
+      word-break: break-word;
     }
+
+    .account-wrap {
+      border: 1px solid #dbeafe;
+      border-radius: 10px;
+      padding: 0.95rem;
+      background: #fff;
+      display: none;
+    }
+    .account-wrap h3 {
+      margin: 0 0 0.6rem 0;
+      font-size: 1.1rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+    }
+    .field label {
+      font-size: 0.93rem;
+      font-weight: 600;
+    }
+    .field input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .account-actions {
+      margin-top: 0.8rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .help {
+      font-size: 0.9rem;
+      color: var(--subtle);
+      margin: 0.5rem 0 0;
+    }
+
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
     .muted { color: var(--subtle); }
+
     @media (max-width: 420px) {
       #restore-btn { max-width: 100%; }
     }
@@ -97,7 +147,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="restore-wrap">
+    <div class="restore-wrap" id="restore-wrap">
       <button id="restore-btn" type="button"> Restore My Account </button>
 
       <div id="restore-backdrop">
@@ -114,6 +164,29 @@
 
       <div id="restore-status" class="muted" aria-live="polite"></div>
     </div>
+
+    <div class="account-wrap" id="account-wrap" aria-live="polite">
+      <h3>Account Settings</h3>
+
+      <div class="field">
+        <label for="account-username"> Username </label>
+        <input id="account-username" type="text" autocomplete="nickname" maxlength="20" placeholder="My username" />
+      </div>
+
+      <div class="field">
+        <label for="account-email">Email</label>
+        <input id="account-email" type="email" autocomplete="email" placeholder="me@email.com" />
+      </div>
+
+      <div class="account-actions">
+        <button id="save-account" type="button" style="background:#0f172a;"> Save account </button>
+      </div>
+
+      <p id="account-status" class="muted"></p>
+      <p class="help">
+        If you update email, you'll get a verification link to the new email. The new email takes effect after confirmation.
+      </p>
+    </div>
   </div>
 
   <script>
@@ -122,24 +195,81 @@
     const client = window.__supabase_client || supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY);
     window.__supabase_client = client;
 
+    const CALLBACK_URL = `${window.location.origin}${window.location.pathname}`;
+
+    const restoreWrap = document.getElementById("restore-wrap");
     const restoreBtn = document.getElementById("restore-btn");
-    const restorePanel = document.getElementById("restore-panel");
-    const emailInput = document.getElementById("restore-email");
+    const restoreEmail = document.getElementById("restore-email");
     const sendRestoreBtn = document.getElementById("send-restore");
     const restoreStatus = document.getElementById("restore-status");
     const restoreBackdrop = document.getElementById("restore-backdrop");
     const closeRestoreBtn = document.getElementById("close-restore");
 
-    function setStatus(msg, tone = "muted") {
-      restoreStatus.className = tone;
-      restoreStatus.textContent = msg || "";
+    const accountWrap = document.getElementById("account-wrap");
+    const accountUsername = document.getElementById("account-username");
+    const accountEmail = document.getElementById("account-email");
+    const saveAccountBtn = document.getElementById("save-account");
+    const accountStatus = document.getElementById("account-status");
+
+    let currentUser = null;
+    let originalProfile = { username: "", email: "" };
+
+    function setStatus(el, msg, tone = "muted") {
+      el.className = tone;
+      el.textContent = msg || "";
+    }
+
+    function isAnonymousUser(user) {
+      return Boolean(
+        user?.is_anonymous ||
+        user?.app_metadata?.provider === "anon" ||
+        user?.app_metadata?.provider === "anonymous"
+      );
+    }
+
+    function isAuthenticatedUser(user) {
+      return Boolean(user?.id && user.email && !isAnonymousUser(user));
+    }
+
+    async function getCurrentSessionUser() {
+      try {
+        const { data, error } = await client.auth.getSession();
+        if (error) {
+          console.warn("Session check failed:", error.message || error);
+          return null;
+        }
+        return data?.session?.user || null;
+      } catch (e) {
+        console.warn("Session check exception:", e?.message || e);
+        return null;
+      }
+    }
+
+    function normalizeEmail(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function validateUsername(username) {
+      const value = String(username || "").trim();
+      if (!value) return "Username is required.";
+      if (value.length < 3 || value.length > 20) return "Username must be 3-20 characters";
+      if (!/^[A-Za-z0-9_]+$/.test(value)) return "Username can only contain letters, numbers, and underscores";
+      return "";
+    }
+
+    function validateEmail(email) {
+      const value = String(email || "").trim();
+      if (!value) return "Email is required";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Enter a valid email address";
+      return "";
     }
 
     function openRestoreModal() {
-      setStatus("");
+      setStatus(restoreStatus, "", "muted");
       restoreBackdrop.style.display = "flex";
-      emailInput.focus();
+      restoreEmail.focus();
     }
+
     function closeRestoreModal() {
       restoreBackdrop.style.display = "none";
     }
@@ -152,33 +282,149 @@
       );
     }
 
+    async function loadAccountProfile(user) {
+      const metadata = user?.user_metadata || {};
+      const cachedDisplayName = metadata.display_name || metadata.username || "";
+
+      let username = String(cachedDisplayName || "").trim();
+      let email = normalizeEmail(user?.email || "");
+
+      try {
+        const { data: profileRow, error } = await client
+          .from("users")
+          .select("username,email")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!error && profileRow) {
+          if (profileRow.username) username = profileRow.username;
+          if (profileRow.email) email = normalizeEmail(profileRow.email);
+        } else if (error) {
+          console.warn("Could not load profile:", error.message || error);
+        }
+      } catch (e) {
+        console.warn("Profile lookup failed:", e?.message || e);
+      }
+
+      accountUsername.value = username;
+      accountEmail.value = email;
+      originalProfile = {
+        username: username,
+        email: email
+      };
+    }
+
+    async function syncAuthStateUI() {
+      const user = await getCurrentSessionUser();
+      currentUser = user;
+
+      if (isAuthenticatedUser(user)) {
+        restoreWrap.style.display = "none";
+        accountWrap.style.display = "block";
+        await loadAccountProfile(user);
+      } else {
+        restoreWrap.style.display = "block";
+        restoreBtn.style.display = "block";
+        accountWrap.style.display = "none";
+      }
+    }
+
     async function handleRecoveryCallback() {
-      if (!isRecoveryRedirect()) return;
+      if (!isRecoveryRedirect()) return false;
 
       const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
       if (error) {
-        setStatus("Cannot complete sign-in from your link. Please try again.", "bad");
-        return;
+        setStatus(restoreStatus, "Cannot complete sign-in from your link. Please try again.", "bad");
+        return true;
       }
 
       const user = data?.session?.user;
       if (!user) {
-        setStatus("No active session found. Click the latest link again.", "bad");
-        return;
+        setStatus(restoreStatus, "No active session found. Click the latest link again.", "bad");
+        return true;
       }
 
-      if (window.history && window.history.replaceState) {  // clean URL after success
+      if (window.history && window.history.replaceState) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
       closeRestoreModal();
-      restoreBtn.style.display = "none";
-      const restoredName =
-        user?.user_metadata?.display_name ||
-        user?.user_metadata?.username ||
-        user.email;
+      const label = user?.user_metadata?.display_name || user?.user_metadata?.username || user.email;
+      await syncAuthStateUI();
+      setStatus(restoreStatus, `Welcome back, ${label || "gamer"}! Your account is restored 🎉`, "ok");
+      return true;
+    }
 
-      setStatus(`Welcome back, ${restoredName}! Your account is restored 🎉`, "ok");
+    async function handleSaveAccount() {
+      if (!currentUser?.id) {
+        setStatus(accountStatus, "No active user session. Please sign in again.", "bad");
+        return;
+      }
+
+      const nextUsername = String(accountUsername.value || "").trim();
+      const nextEmail = normalizeEmail(accountEmail.value);
+
+      const usernameError = validateUsername(nextUsername);
+      if (usernameError) {
+        setStatus(accountStatus, usernameError, "bad");
+        return;
+      }
+
+      const emailError = validateEmail(nextEmail);
+      if (emailError) {
+        setStatus(accountStatus, emailError, "bad");
+        return;
+      }
+
+      const changedUsername = nextUsername !== originalProfile.username;
+      const changedEmail = nextEmail !== originalProfile.email;
+
+      if (!changedUsername && !changedEmail) {
+        setStatus(accountStatus, "No changes to save.", "muted");
+        return;
+      }
+
+      saveAccountBtn.disabled = true;
+      setStatus(accountStatus, "Saving...", "muted");
+
+      try {  // sync username with display_name, update email in auth if changed
+        const updatePayload = {
+          data: { display_name: nextUsername }
+        };
+        if (changedEmail) {
+          updatePayload.email = nextEmail;
+        }
+
+        const { error: authErr } = await client.auth.updateUser(
+          updatePayload,
+          changedEmail ? { emailRedirectTo: CALLBACK_URL } : undefined
+        );
+        if (authErr) throw new Error(`Auth update failed: ${authErr.message}`);
+
+        const { error: profileErr } = await client  // sync public.users.username and public.users.email
+          .from("users")
+          .upsert(
+            {
+              id: currentUser.id,
+              username: nextUsername,
+              email: nextEmail
+            },
+            { onConflict: "id" }
+          );
+        if (profileErr) throw new Error(`Profile update failed: ${profileErr.message}`);
+
+        if (changedEmail) {
+          setStatus(accountStatus, "Saved. Check your inbox to confirm the new email.", "ok");
+        } else {
+          setStatus(accountStatus, "Saved.", "ok");
+        }
+
+        await syncAuthStateUI();
+      } catch (e) {
+        setStatus(accountStatus, e?.message || "Could not save account details.", "bad");
+      } finally {
+        saveAccountBtn.disabled = false;
+      }
     }
 
     restoreBtn.addEventListener("click", openRestoreModal);
@@ -188,22 +434,22 @@
     });
 
     sendRestoreBtn.addEventListener("click", async () => {
-      const email = String(emailInput.value || "").trim().toLowerCase();
+      const email = normalizeEmail(restoreEmail.value);
       if (!email) {
-        setStatus("Please enter your backup email:", "bad");
+        setStatus(restoreStatus, "Please enter your backup email:", "bad");
         return;
       }
 
       sendRestoreBtn.disabled = true;
-      setStatus("Checking email...", "muted");
+      setStatus(restoreStatus, "Checking email...", "muted");
 
-      try {  // explicitly check auth.users for email via SQL function
+      try {  // explicitly check auth.users via RPC
         const { data: exists, error: checkErr } = await client.rpc("has_auth_email", {
           p_email: email
         });
 
         if (checkErr) {
-          setStatus(`Could not verify account: ${checkErr.message}`, "bad");
+          setStatus(restoreStatus, `Could not verify account: ${checkErr.message}`, "bad");
           return;
         }
 
@@ -215,27 +461,30 @@
           return;
         }
 
-        const { error: otpErr } = await client.auth.signInWithOtp({  // send recovery magic link to email
+        const { error: otpErr } = await client.auth.signInWithOtp({
           email,
-          options: {
-            emailRedirectTo: "https://cozybun.github.io/temps/home.html"
-          }
+          options: { emailRedirectTo: CALLBACK_URL }
         });
 
         if (otpErr) {
-          setStatus(`Could not send recovery link: ${otpErr.message}`, "bad");
+          setStatus(restoreStatus, `Could not send recovery link: ${otpErr.message}`, "bad");
           return;
         }
 
         setStatus("Recovery link sent to email. Check your inbox (and spam).", "ok");
       } catch (e) {
-        setStatus("Something went wrong. Please try again.", "bad");
+        setStatus(restoreStatus, "Something went wrong. Please try again.", "bad");
       } finally {
         sendRestoreBtn.disabled = false;
       }
     });
 
-    document.addEventListener("DOMContentLoaded", handleRecoveryCallback);  // handle user returning from magic link
+    saveAccountBtn.addEventListener("click", handleSaveAccount);
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await handleRecoveryCallback();
+      await syncAuthStateUI();
+    });
   </script>
 </body>
 </html>
