@@ -1781,7 +1781,7 @@
         <div class="mood"><span class="score-value ${escapeHtml(scoreValueClass(
           forecasted && s.mood !== null && s.mood !== undefined && s.mood !== "" ? Number(s.mood) : NaN
         ))}">
-          ${escapeHtml(`💗 ${forecasted ? formatSignedNumber(s.mood) : "—"`)}
+          ${escapeHtml("💗 " + (forecasted ? formatSignedNumber(s.mood) : "—"))}
         </span></div>
       `;
 
