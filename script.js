@@ -196,10 +196,10 @@ async function claimBackupUsername(uid, rawUsername) {
   if (!raw) return { ok: false, message: "Username cannot be empty" };
 
   const normalized = raw.toLowerCase();
-  if (!/^[a-zA-Z0-9]{3,16}$/.test(normalized)) {
+  if (!/^[a-zA-Z0-9_]{3,16}$/.test(normalized)) {
     return {
       ok: false,
-      message: "Username must be 3-16 characters and alphanumeric only"
+      message: "Username must be 3-20 characters and contain letters, numbers, or underscores"
     };
   }
 
