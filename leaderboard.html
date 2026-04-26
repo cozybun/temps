@@ -122,18 +122,32 @@
       text-align: center;
     }
 
-    .board-head strong {
-      font-size: 1.12rem;
+    .board-title {
+      font-size: 1.33rem;
       letter-spacing: 0.2px;
       display: block;
-      font-weight: 700;
+      font-weight: 800;
       text-align: center;
+      line-height: 1.25;
     }
 
+    .month-sep,
     .month-label {
+      margin-left: 0.18rem;
+      margin-right: 0.18rem;
+      font-size: inherit;
+      font-weight: inherit;
+      color: inherit;
+    }
+
+    .ranking-note {
+      margin: 0;
+      font-size: 0.93rem;
       color: var(--muted);
-      font-size: 1rem;
-      font-weight: 560;
+      text-align: center;
+      max-width: 95%;
+      line-height: 1.35;
+      font-weight: 500;
     }
 
     .status {
@@ -265,8 +279,8 @@
     @media (max-width: 560px) {
       body { padding: 10px; font-size: 16px; }
       h1 { font-size: 1.7rem; }
-      .subtitle { font-size: 1.01rem; }
-      .board-head strong { font-size: 1.05rem; }
+      .board-title { font-size: 1.18rem; }
+      .ranking-note { font-size: 0.88rem; }
       .status { font-size: 0.93rem; }
       .row { grid-template-columns: 52px 1fr auto auto; padding: 10px; gap: 10px; }
       .rank { width: 40px; height: 40px; }
@@ -286,17 +300,24 @@
   <main class="app">
     <section class="header">
       <div class="title-box">
-        <h1>🔮 Temps Leaderboard 🔮</h1>
-        <p class="subtitle">View top users &amp; you</p>
+        <h1> 🐰 Temps Leaderboard 🔮 </h1>
+        <p class="subtitle"> View top users &amp; you </p>
       </div>
       <div class="toolbar">
-        <button id="refreshBtn" type="button">Go to Daily</button>
+        <button id="refreshBtn" type="button"> Go to Daily </button>
       </div>
     </section>
 
     <section class="board">
       <div class="board-head">
-        <strong> Monthly Standings <span id="monthLabel" class="month-label"></span></strong>
+        <strong class="board-title">
+          Monthly Standings
+          <span class="month-sep" id="monthSep" aria-hidden="true">—</span>
+          <span class="month-label" id="monthLabel"></span>
+        </strong>
+        <p class="ranking-note">
+          Ranked by highest coins, then streak, then mood, then earliest account creation
+        </p>
         <span class="status" id="status"> Loading… </span>
       </div>
       <div class="list-wrap">
@@ -316,13 +337,15 @@
     const refreshBtn = document.getElementById("refreshBtn");
     const monthLabelEl = document.getElementById("monthLabel");
 
+    const MONTH_NAMES = [ "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec" ];
+
     const headers = {
       apikey: SUPABASE_PUB_KEY,
       Authorization: `Bearer ${SUPABASE_PUB_KEY}`,
       "Content-Type": "application/json"
     };
 
-    // Fetch all fields for internal ranking logic
+    // Fetch all needed fields for ranking logic
     const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=user_id,username,display_name,coins,current_streak,mood,created_at,rank`;
     const SOURCE_LABEL = "leaderboard view";
 
@@ -460,7 +483,7 @@
     }
 
     function getMonthLabel(date = new Date()) {
-      const month = date.toLocaleString("en-US", { month: "short" });
+      const month = MONTH_NAMES[date.getMonth()] || date.toLocaleString("en-US", { month: "short" });
       const year = date.getFullYear();
       return `${month} ${year}`;
     }
@@ -585,7 +608,7 @@
 
     async function fetchLeaderboard() {
       statusEl.textContent = "Loading…";
-      rowsEl.innerHTML = `<li class="empty"> Loading leaderboard… </li>`;
+      rowsEl.innerHTML = `<li class="empty">Loading leaderboard…</li>`;
 
       const errors = [];
 
@@ -614,7 +637,6 @@
     if (monthLabelEl) {
       monthLabelEl.textContent = getMonthLabel();
     }
-
     fetchLeaderboard();
   </script>
 </body>
