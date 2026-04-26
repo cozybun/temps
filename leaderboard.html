@@ -438,22 +438,10 @@
       return id;
     }
 
-    function resolveDisplayName(row, currentUserId) {
-      const viewDisplay = (row.display_name || "").trim();
+    function resolveDisplayName(row) {
       const username = sanitizeUsername(row.username);
-
-      if (viewDisplay && viewDisplay.toLowerCase() !== "anon") {
-        return viewDisplay;
-      }
-
-      if (username && username !== "Anon") return username;
-
-      if (currentUserId && String(row.user_id || "") === String(currentUserId)) {
-        return "Me";
-      }
-
-      return "Anon";
-    }
+      return username && username !== "Anon" ? username : "Anon";
+    }  
 
     function normalizeRows(data, currentUserId) {
       if (!Array.isArray(data)) return [];
@@ -464,7 +452,7 @@
         mood: Number(r.mood || 0),
         created_at: r.created_at || "",
         rank: Number(r.rank || idx + 1),
-        name: resolveDisplayName(r, currentUserId)
+        name: resolveDisplayName(r)
       }));
     }
 
@@ -613,9 +601,8 @@
       const errors = [];
 
       try {
-        const me = await getCurrentUserId();
         const data = await requestJSON(LEADERBOARD_URL);
-        const players = normalizeRows(data, me);
+        const players = normalizeRows(data);
         renderPlayers(players);
         return;
       } catch (err) {
