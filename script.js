@@ -199,7 +199,7 @@ async function claimBackupUsername(uid, rawUsername) {
   if (!/^[a-zA-Z0-9_]{3,16}$/.test(normalized)) {
     return {
       ok: false,
-      message: "Username must be 3-20 characters and contain letters, numbers, or underscores"
+      message: "Username must be 3-16 characters and contain letters, numbers, or underscores"
     };
   }
 
@@ -2142,7 +2142,7 @@ async function handleHourlySubmit(e) {
 
     if (row.hourlyVal === undefined) {
       markInvalid(row.sixHrInput);
-      validationMessages.push(`${row.cityName}: 6-hr high requires the hourly ${selectedHour} forecast first.`);
+      validationMessages.push(`${row.cityName}: 6-hr high requires the hourly ${selectedHour} forecast`);
     } else if (row.sixHrVal < row.hourlyVal) {
       markInvalid(row.sixHrInput);
       validationMessages.push(
