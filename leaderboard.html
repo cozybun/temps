@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leaderboard</title>
+  <title> Leaderboard </title>
   <style>
     :root{
       --bg1: #fffaf5;
@@ -127,6 +127,13 @@
       letter-spacing: 0.2px;
       display: block;
       font-weight: 700;
+      text-align: center;
+    }
+
+    .month-label {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 560;
     }
 
     .status {
@@ -154,7 +161,7 @@
 
     .row {
       display: grid;
-      grid-template-columns: 64px 1fr auto;
+      grid-template-columns: 64px 1fr auto auto;
       align-items: center;
       gap: 12px;
       padding: 12px;
@@ -195,23 +202,34 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       text-align: left;
+      min-width: 0;
     }
 
-    .coins {
-      justify-self: end;
-      font-weight: 700;
-      padding: 8px 12px;
-      border-radius: 999px;
+    .stat-col {
+      justify-self: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+      min-width: 56px;
+      padding: 8px 6px;
+      border-radius: 10px;
       background: #edfcff;
-      color: #0b5565;
       border: 1px solid #c7f0f7;
+    }
+
+    .stat-emoji {
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      color: #2b6f7f;
+    }
+
+    .stat-value {
+      font-weight: 700;
       font-variant-numeric: tabular-nums;
+      color: #0b5565;
       font-size: 1.04rem;
       white-space: nowrap;
-    }
-
-    .coins .coin-emoji {
-      margin-right: 6px;
     }
 
     .empty, .error {
@@ -250,10 +268,11 @@
       .subtitle { font-size: 1.01rem; }
       .board-head strong { font-size: 1.05rem; }
       .status { font-size: 0.93rem; }
-      .row { grid-template-columns: 52px 1fr auto; padding: 10px; }
+      .row { grid-template-columns: 52px 1fr auto auto; padding: 10px; gap: 10px; }
       .rank { width: 40px; height: 40px; }
       .name { font-size: 1.01rem; }
-      .coins { font-size: 0.96rem; padding: 7px 10px; }
+      .stat-col { min-width: 52px; padding: 7px 4px; }
+      .stat-value { font-size: 0.96rem; }
       .empty, .error { font-size: 0.95rem; }
       .error-title, .error-line { font-size: 0.92rem; }
       button {
@@ -277,12 +296,12 @@
 
     <section class="board">
       <div class="board-head">
-        <strong>Monthly Standings</strong>
-        <span class="status" id="status">Loading…</span>
+        <strong> Monthly Standings <span id="monthLabel" class="month-label"></span></strong>
+        <span class="status" id="status"> Loading… </span>
       </div>
       <div class="list-wrap">
         <ul class="player-list" id="rows">
-          <li class="empty">Loading leaderboard…</li>
+          <li class="empty"> Loading leaderboard… </li>
         </ul>
       </div>
     </section>
@@ -291,10 +310,11 @@
   <script>
     const SUPABASE_URL = "https://ckyqknlxmjqlkqnxhgef.supabase.co";
     const SUPABASE_PUB_KEY = "sb_publishable_lQ27fzzwJf27dUWPEW8UQA_NTY7naO6";
-    
+
     const statusEl = document.getElementById("status");
     const rowsEl = document.getElementById("rows");
     const refreshBtn = document.getElementById("refreshBtn");
+    const monthLabelEl = document.getElementById("monthLabel");
 
     const headers = {
       apikey: SUPABASE_PUB_KEY,
@@ -302,7 +322,8 @@
       "Content-Type": "application/json"
     };
 
-    const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=user_id,username,display_name,coins,current_streak,mood,created_at,rank&order=coins.desc,current_streak.desc,mood.desc,created_at.asc`;
+    // Fetch all fields for internal ranking logic
+    const LEADERBOARD_URL = `${SUPABASE_URL}/rest/v1/leaderboard?select=user_id,username,display_name,coins,current_streak,mood,created_at,rank`;
     const SOURCE_LABEL = "leaderboard view";
 
     let cachedCurrentUserId = null;
@@ -387,9 +408,7 @@
     async function getCurrentUserId() {
       if (cachedCurrentUserId !== null) return cachedCurrentUserId;
 
-      // 1) Try common localStorage session key format used by Supabase browser client
       let id = getStoredUserIdFromLocalStorage();
-      // 2) Fallback to auth endpoint via cookie auth if available
       if (!id) id = await getUserIdFromAuthCookie();
 
       cachedCurrentUserId = id;
@@ -400,16 +419,12 @@
       const viewDisplay = (row.display_name || "").trim();
       const username = sanitizeUsername(row.username);
 
-      if (viewDisplay && viewDisplay.toLowerCase() !== "anon") {    // Prefer explicit display_name from view when available
+      if (viewDisplay && viewDisplay.toLowerCase() !== "anon") {
         return viewDisplay;
       }
 
-      // If username exists, use it
-      if (username && username !== "Anon") {
-        return username;
-      }
+      if (username && username !== "Anon") return username;
 
-      // Fallback: if we can identify current user, show Me
       if (currentUserId && String(row.user_id || "") === String(currentUserId)) {
         return "Me";
       }
@@ -444,48 +459,66 @@
       return "";
     }
 
+    function getMonthLabel(date = new Date()) {
+      const month = date.toLocaleString("en-US", { month: "short" });
+      const year = date.getFullYear();
+      return `${month} ${year}`;
+    }
+
+    // Ranking system: coins desc, current streak desc, mood desc, created_at asc
+    function rankComparator(a, b) {
+      if (b.coins !== a.coins) return b.coins - a.coins;
+      if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
+      if (b.mood !== a.mood) return b.mood - a.mood;
+
+      const aTime = Date.parse(a.created_at);
+      const bTime = Date.parse(b.created_at);
+      const aValid = Number.isFinite(aTime);
+      const bValid = Number.isFinite(bTime);
+
+      if (aValid && bValid && aTime !== bTime) return aTime - bTime; // older first
+      if (aValid !== bValid) return aValid ? -1 : 1;
+
+      return a.name.localeCompare(b.name);
+    }
+
     function renderPlayers(players) {
       rowsEl.innerHTML = "";
-    
+
       if (!players.length) {
         rowsEl.innerHTML = `<li class="empty">No users yet.</li>`;
         statusEl.textContent = "No users yet";
         return;
       }
-    
-      const ordered = [...players]    // sort by coins then streak if tied then mood if still tied then created_at as tiebreaker
-        .sort((a, b) => {
-          if (b.coins !== a.coins) return b.coins - a.coins;
 
-          if (b.current_streak !== a.current_streak) return b.current_streak - a.current_streak;
-
-          if (b.mood !== a.mood) return b.mood - a.mood;
-
-          const at = new Date(a.created_at).getTime();
-          const bt = new Date(b.created_at).getTime();
-          if (!Number.isNaN(at) && !Number.isNaN(bt)) return at - bt;
-
-          return 0;
-        })
+      const ordered = [...players]
+        .sort(rankComparator)
         .map((player, idx) => ({ ...player, displayRank: idx + 1 }));
-    
+
       statusEl.textContent = `Updated ${new Date().toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit", hour12: true })}`;
-    
+
       for (const p of ordered) {
         const li = document.createElement("li");
         li.className = "row";
         const rankClass = getRankClass(p.displayRank);
-    
+
         const safeName = escapeHtml(p.name);
         li.innerHTML = `
           <div class="rank ${rankClass}">${rankEmoji(p.displayRank)}</div>
           <div class="name" title="${safeName}">${safeName}</div>
-          <div class="coins"><span class="coin-emoji">🪙</span>${formatNumber(p.coins)} coins</div>
+          <div class="stat-col">
+            <div class="stat-emoji">🪙</div>
+            <div class="stat-value">${formatNumber(p.coins)}</div>
+          </div>
+          <div class="stat-col">
+            <div class="stat-emoji">🌟</div>
+            <div class="stat-value">${formatNumber(p.current_streak)}</div>
+          </div>
         `;
         rowsEl.appendChild(li);
       }
     }
-        
+
     function renderError(errors) {
       rowsEl.innerHTML = "";
 
@@ -552,7 +585,7 @@
 
     async function fetchLeaderboard() {
       statusEl.textContent = "Loading…";
-      rowsEl.innerHTML = `<li class="empty">Loading leaderboard…</li>`;
+      rowsEl.innerHTML = `<li class="empty"> Loading leaderboard… </li>`;
 
       const errors = [];
 
@@ -577,6 +610,10 @@
     refreshBtn.addEventListener("click", () => {
       window.location.href = "daily";
     });
+
+    if (monthLabelEl) {
+      monthLabelEl.textContent = getMonthLabel();
+    }
 
     fetchLeaderboard();
   </script>
