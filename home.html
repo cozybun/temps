@@ -13,8 +13,8 @@
       --ok: #15803d;
       --bad: #b91c1c;
       --subtle: #64748b;
-      --brand-green: #10b981;
-      --brand-green-dark: #059669;
+      --brand-green: #228B22;
+      --brand-green-dark: #006400;
     }
 
     * { box-sizing: border-box; }
@@ -43,6 +43,7 @@
       border-radius: 10px;
       padding: 0.85rem 1.2rem;
       font-size: 1.2rem;
+      font-weight: 600;
       display: block;
       margin: 0 auto;
       width: min(92vw, 240px);
@@ -273,36 +274,36 @@
       word-break: break-word;
     }
 
-    .daily-link-wrap {
+    .daily-button-wrap {
       margin: 1rem auto 0.2rem;
       text-align: center;
     }
 
-    #daily-link {
-      display: inline-flex;
+    #daily-button {
+      display: block;
+      margin: 0 auto;
+      width: min(92vw, 240px);
+      max-width: 220px;
       align-items: center;
       justify-content: center;
       text-decoration: none;
-      font-weight: 700;
-      font-size: 0.92rem;
+      font-weight: 600;
+      font-size: 1.2rem;
       color: #fff;
       background: var(--brand-green);
-      border-radius: 9999px;
-      padding: 0.52rem 0.92rem;
+      border-radius: 10px;
+      padding: 0.85rem 1.2rem;
       border: 0;
       line-height: 1;
       box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
       cursor: pointer;
-      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
     }
 
-    #daily-link:hover {
+    #daily-button:hover {
       background: var(--brand-green-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
 
-    #daily-link:active {
+    #daily-button:active {
       transform: scale(0.98);
     }
 
@@ -326,16 +327,16 @@
 <body>
   <div class="page">
     <div class="restore-wrap" id="restore-wrap">
-      <button id="restore-btn" type="button">Restore My Account</button>
+      <button id="restore-btn" type="button"> Restore My Account </button>
 
       <div id="restore-backdrop">
         <div id="restore-panel">
           <div class="row">
-            <input id="restore-email" type="email" placeholder="you@example.com" autocomplete="email" />
-            <button id="send-restore" type="button">Send recovery link</button>
+            <input id="restore-email" type="email" placeholder="me@email.com" autocomplete="email" />
+            <button id="send-restore" type="button"> Send recovery link </button>
           </div>
           <div class="row" style="justify-content:flex-end; margin-top:0.6rem;">
-            <button id="close-restore" type="button">Close</button>
+            <button id="close-restore" type="button"> Close </button>
           </div>
         </div>
       </div>
@@ -343,8 +344,8 @@
       <div id="restore-status" class="muted" aria-live="polite"></div>
     </div>
 
-    <div class="daily-link-wrap">
-      <a id="daily-link" href="daily" aria-label="Go to Daily"> Go to Daily </a>
+    <div class="daily-button-wrap">
+      <a id="daily-button" href="daily" aria-label="Go to Daily"> Go to Daily </a>
     </div>
 
     <p id="music-note" class="music-note" aria-live="polite"></p>
@@ -417,7 +418,7 @@
     let currentUser = null;
     let originalProfile = { username: "", email: "" };
 
-    const musicPlaylist = [  // background music settings
+    const musicPlaylist = [  // game music soundtrack
       { title: "Worldsong", src: "audio/worldsong.mp3" },
       { title: "Track 2", src: "audio/track2.mp3" },
       { title: "Track 3", src: "audio/track3.mp3" }
@@ -427,7 +428,7 @@
     let musicTrackIndex = 0;
     let musicStarted = false;
 
-    bgMusic.volume = 0.35;
+    bgMusic.volume = 0.5;
     bgMusic.playsInline = true;
 
     function setTrack(index) {
@@ -450,12 +451,12 @@
       return bgMusic.play()
         .then(() => {
           musicStarted = true;
-          if (musicNote) musicNote.textContent = "Background music is playing.";
+          if (musicNote) musicNote.textContent = "Background music is playing";
           return true;
         })
         .catch(() => {
           musicStarted = false;
-          if (musicNote) musicNote.textContent = "Tap/click once to start background music (autoplay blocked).";
+          if (musicNote) musicNote.textContent = "Click once to start background music (autoplay blocked)";
           return false;
         });
     }
@@ -766,14 +767,14 @@
         if (musicNote && first) musicNote.textContent = `Loaded: ${first}`;
         playCurrentTrack();
       } else {
-        if (musicNote) musicNote.textContent = "No music tracks configured.";
+        if (musicNote) musicNote.textContent = "No music tracks configured";
       }
 
       await handleRecoveryCallback();
       await syncAuthStateUI();
     });
 
-    function startMusicAfterUserGesture() {  // autoplay fallback, one user gesture starts music if blocked
+    function startMusicAfterUserGesture() {  // autoplay fallback, user click starts music if blocked
       if (!musicStarted) playCurrentTrack();  
     }
     document.addEventListener("pointerdown", startMusicAfterUserGesture, { once: true });
