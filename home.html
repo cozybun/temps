@@ -343,16 +343,18 @@
 
       <div id="restore-status" class="muted" aria-live="polite"></div>
     </div>
-
-    <div class="field">
-      <label for="music-volume"> Music volume: <span id="music-volume-label"> 50% </span></label>
-      <input id="music-volume" type="range" min="0" max="1" step="0.25" value="0.5" />
-    </div>
-
+    
     <div class="daily-button-wrap">
       <a id="daily-button" href="daily" aria-label="Go to Daily"> Go to Daily </a>
     </div>
-
+    
+    <div class="field">
+      <label for="music-volume">
+        Music volume: <span id="music-volume-label"> 50% </span>
+      </label>
+      <input id="music-volume" type="range" min="0" max="1" step="0.25" value="0.5" />
+    </div>
+    
     <p id="music-note" class="music-note" aria-live="polite"></p>
   </div>
 
@@ -620,9 +622,10 @@
     async function syncAuthStateUI() {
       const user = await getCurrentSessionUser();
       currentUser = user;
-
+    
       if (isAuthenticatedUser(user)) {
         restoreWrap.style.display = "none";
+        settingsBtn.style.display = "";
         settingsBtn.classList.add("show");
         await loadAccountProfile(user);
       } else {
