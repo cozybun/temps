@@ -182,6 +182,8 @@
     const learnPanel = document.getElementById("learnPanel");
     const placeholderText = document.getElementById("placeholderText");
     const alphaNotice = document.getElementById("alphaNotice");
+    placeholderText.classList.add("hidden");
+    alphaNotice.classList.remove("hidden");
 
     learnBtn.addEventListener("click", () => {
       const isShowing = learnPanel.classList.toggle("visible");
