@@ -1987,9 +1987,8 @@ async function handleDailySubmit(e) {
   const finalUserId = result.userId || activeUserId;
   if (finalUserId) userId = finalUserId;
 
-  const lockedMsg =
-    lockedCityNames.size > 0
-      ? ` (excluded due cutoff: ${[...lockedCityNames].join(", ")})`
+  const lockedMsg = lockedCityNames.size > 0
+      ? ` (Past cutoff: ${[...lockedCityNames].join(", ")})`
       : "";
 
   setStatus(
