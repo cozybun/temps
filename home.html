@@ -391,6 +391,11 @@
   <!-- Background music player (no controls visible) -->
   <audio id="bgMusic" preload="auto" aria-label="Background music"></audio>
 
+  <div class="field">
+    <label for="music-volume"> Music volume: <span id="music-volume-label"> 50% </span></label>
+    <input id="music-volume" type="range" min="0" max="1" step="0.25" value="0.5" />
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
     const SUPABASE_PUB_KEY = "sb_publishable_lQ27fzzwJf27dUWPEW8UQA_NTY7naO6";
@@ -419,17 +424,39 @@
     let originalProfile = { username: "", email: "" };
 
     const musicPlaylist = [  // game music soundtrack
-      { title: "Worldsong", src: "audio/worldsong.mp3" },
-      { title: "Track 2", src: "audio/track2.mp3" },
-      { title: "Track 3", src: "audio/track3.mp3" }
+      { title: "Emerald Canopy", src: "audio/1_emerald_canopy.flac" },
+      { title: "Frostbound Echoes", src: "audio/2_frostbound_echoes.flac" },
+      { title: "Verdant Labyrinth", src: "audio/3_verdant_labyrinth.flac" },
+      { title: "Abyssal Dreams", src: "audio/4_abyssal_dreams.flac" },
+      { title: "Crimson Decay", src: "audio/5_crimson_decay.flac" },
+      { title: "Celestial Radiance", src: "audio/6_celestial_radiance.flac" },
+      { title: "Stone Whispers", src: "audio/7_stone_whispers.flac" },
+      { title: "Neon Spores", src: "audio/8_neon_spores.flac" },
+      { title: "Infernal Heartbeat", src: "audio/9_infernal_heartbeat.flac" },
+      { title: "Apex Confrontation", src: "audio/10_apex_confrontation.mp3" },
+      { title: "Sands of Time", src: "audio/11_sands_of_time.mp3" }
     ];
     const bgMusic = document.getElementById("bgMusic");
     const musicNote = document.getElementById("music-note");
     let musicTrackIndex = 0;
     let musicStarted = false;
 
+    const musicVolume = document.getElementById("music-volume");
+    const musicVolumeLabel = document.getElementById("music-volume-label");
+    
     bgMusic.volume = 0.5;
     bgMusic.playsInline = true;
+    
+    if (musicVolume) {
+      musicVolume.value = String(bgMusic.volume);
+      musicVolumeLabel.textContent = `${Math.round(bgMusic.volume * 100)}%`;
+    
+      musicVolume.addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        bgMusic.volume = v;
+        musicVolumeLabel.textContent = `${Math.round(v * 100)}%`;
+      });
+    }
 
     function setTrack(index) {
       if (!musicPlaylist.length) return "";
