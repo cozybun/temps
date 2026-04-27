@@ -430,6 +430,7 @@
     let originalProfile = { username: "", email: "" };
 
     const musicPlaylist = [  // game music soundtrack
+      { title: "Sands of Time", src: "audio/11_sands_of_time.mp3" },
       { title: "Emerald Canopy", src: "audio/1_emerald_canopy.flac" },
       { title: "Frostbound Echoes", src: "audio/2_frostbound_echoes.flac" },
       { title: "Verdant Labyrinth", src: "audio/3_verdant_labyrinth.flac" },
@@ -440,7 +441,6 @@
       { title: "Neon Spores", src: "audio/8_neon_spores.flac" },
       { title: "Infernal Heartbeat", src: "audio/9_infernal_heartbeat.flac" },
       { title: "Apex Confrontation", src: "audio/10_apex_confrontation.mp3" },
-      { title: "Sands of Time", src: "audio/11_sands_of_time.mp3" }
     ];
     const bgMusic = document.getElementById("bgMusic");
     const musicNote = document.getElementById("music-note");
@@ -496,20 +496,29 @@
       if (musicNote) musicNote.textContent = `Loaded: ${label}`;
       return label;
     }
-
-    function playCurrentTrack() {
-      if (!bgMusic || !bgMusic.src) return Promise.resolve(false);
-      return bgMusic.play()
-        .then(() => {
-          musicStarted = true;
-          if (musicNote) musicNote.textContent = "Background music is playing";
-          return true;
-        })
-        .catch(() => {
-          musicStarted = false;
-          if (musicNote) musicNote.textContent = "Click once to start background music (autoplay blocked)";
-          return false;
-        });
+    
+    async function playCurrentTrack() {
+      if (!bgMusic || !bgMusic.src) return false;
+    
+      try {
+        await bgMusic.play();
+        musicStarted = true;
+        if (musicNote) musicNote.textContent = "Background music playing";
+        return true;
+      } catch (err) {
+        musicStarted = false;
+        console.error("Play failed:", err);
+    
+        if (err.name === "NotAllowedError") {
+          musicNote.textContent = "Browser blocked autoplay. Click the music button.";
+        } else if (err.name === "NotSupportedError") {
+          musicNote.textContent = "This track format is not supported. Skipping...";
+          playNextTrack();  // try next track
+        } else {
+          musicNote.textContent = `Cannot play audio (${err.name})`;
+        }
+        return false;
+      }
     }
 
     function playNextTrack() {
