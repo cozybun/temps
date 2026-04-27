@@ -442,53 +442,35 @@
       { title: "Infernal Heartbeat", src: "audio/9_infernal_heartbeat.flac" },
       { title: "Apex Confrontation", src: "audio/10_apex_confrontation.mp3" }
     ];
+
     const bgMusic = document.getElementById("bgMusic");
     const musicNote = document.getElementById("music-note");
-    let musicTrackIndex = 0;
-    let musicStarted = false;
-
+    const startMusicBtn = document.getElementById("start-music-btn");
     const musicVolume = document.getElementById("music-volume");
     const musicVolumeLabel = document.getElementById("music-volume-label");
 
-    const startMusicBtn = document.getElementById("start-music-btn");
+    let musicTrackIndex = 0;
+    let musicStarted = false;
+    let isStarting = false;
+    let failStreak = 0;
 
-    bgMusic.addEventListener("loadeddata", () => {
-      const track = musicPlaylist[musicTrackIndex];
-      musicNote.textContent = `Loaded: ${track?.title || "track"} (${track?.src || ""})`;
-    });
+    function mimeForTrack(track) {
+      if (!track?.src) return "";
+      const lower = track.src.toLowerCase();
+      if (lower.endsWith(".mp3")) return "audio/mpeg";
+      if (lower.endsWith(".flac")) return "audio/flac";
+      return "";
+    }
 
-    function startMusicAfterUserGesture() {
-      if (!musicStarted) playCurrentTrack();
-      if (musicStarted && startMusicBtn) startMusicBtn.style.display = "none";
-    }
-    
-    if (startMusicBtn) {
-      startMusicBtn.addEventListener("click", async () => {
-        const ok = await playCurrentTrack();
-        if (ok) startMusicBtn.style.display = "none";
-      });
-    }
-    
-    ["pointerdown", "touchstart", "click", "keydown"].forEach((evt) => {
-      document.addEventListener(evt, startMusicAfterUserGesture, { once: true });
-    });
-    
-    bgMusic.volume = 0.5;
-    bgMusic.playsInline = true;
-    
-    if (musicVolume) {
-      musicVolume.value = String(bgMusic.volume);
-      musicVolumeLabel.textContent = `${Math.round(bgMusic.volume * 100)}%`;
-    
-      musicVolume.addEventListener("input", (e) => {
-        const v = Number(e.target.value);
-        bgMusic.volume = v;
-        musicVolumeLabel.textContent = `${Math.round(v * 100)}%`;
-      });
+    function canPlayTrack(track) {
+      const mime = mimeForTrack(track);
+      if (!mime) return true;
+      return bgMusic.canPlayType(mime) !== "";
     }
 
     function setTrack(index) {
-      if (!musicPlaylist.length) return "";
+      if (!musicPlaylist.length) return null;
+
       const len = musicPlaylist.length;
       musicTrackIndex = (index % len + len) % len;
 
@@ -499,40 +481,114 @@
 
       const label = track.title || `Track ${musicTrackIndex + 1}`;
       if (musicNote) musicNote.textContent = `Loaded: ${label}`;
-      return label;
+      return track;
     }
-    
+
     async function playCurrentTrack() {
-      if (!bgMusic || !bgMusic.src) return false;
-    
+      if (isStarting) return false;
+      isStarting = true;
+
+      const track = musicPlaylist[musicTrackIndex];
+      if (!track) {
+        isStarting = false;
+        return false;
+      }
+
+      if (!canPlayTrack(track)) {
+        isStarting = false;
+        musicNote.textContent = `Skipping unsupported: ${track.title}`;
+        return playNextTrack();
+      }
+
       try {
         await bgMusic.play();
         musicStarted = true;
+        failStreak = 0;
         if (musicNote) musicNote.textContent = "Background music playing";
+        if (startMusicBtn) startMusicBtn.style.display = "none";
         return true;
       } catch (err) {
         musicStarted = false;
         console.error("Play failed:", err);
-    
+
         if (err.name === "NotAllowedError") {
           musicNote.textContent = "Browser blocked autoplay. Click the music button.";
         } else if (err.name === "NotSupportedError") {
-          musicNote.textContent = "This track format is not supported. Skipping...";
-          playNextTrack();  // try next track
+          musicNote.textContent = `Track unsupported: ${track.title}`;
+          return playNextTrack();
         } else {
           musicNote.textContent = `Cannot play audio (${err.name})`;
         }
+
         return false;
+      } finally {
+        isStarting = false;
       }
     }
 
     function playNextTrack() {
-      if (musicPlaylist.length <= 1) return;
+      if (musicPlaylist.length <= 1) return false;
+      failStreak++;
+      if (failStreak >= musicPlaylist.length) {
+        musicNote.textContent = "No playable tracks available";
+        return false;
+      }
       setTrack(musicTrackIndex + 1);
-      playCurrentTrack();
+      return playCurrentTrack();
     }
 
+    function startMusicAfterUserGesture() {
+      if (!musicStarted) playCurrentTrack();
+    }
+
+    bgMusic.addEventListener("loadeddata", () => {
+      const track = musicPlaylist[musicTrackIndex];
+      if (track) musicNote.textContent = `Loaded: ${track.title || "track"}`;
+    });
+
+    bgMusic.addEventListener("error", () => {
+      const track = musicPlaylist[musicTrackIndex];
+      console.error("Audio load error:", track?.src, bgMusic.error);
+      playNextTrack();
+    });
+
     bgMusic.addEventListener("ended", playNextTrack);
+
+    if (startMusicBtn) {
+      startMusicBtn.addEventListener("click", startMusicAfterUserGesture);
+    }
+
+    ["pointerdown", "touchstart", "keydown"].forEach((evt) => {
+      document.addEventListener(evt, startMusicAfterUserGesture, { once: true });
+    });
+
+    if (musicVolume) {
+      bgMusic.volume = Number(musicVolume.value);
+      musicVolumeLabel.textContent = `${Math.round(bgMusic.volume * 100)}%`;
+
+      musicVolume.addEventListener("input", (e) => {
+        const v = Number(e.target.value);
+        bgMusic.volume = v;
+        musicVolumeLabel.textContent = `${Math.round(v * 100)}%`;
+      });
+    }
+
+    bgMusic.volume = 0.5;
+    bgMusic.playsInline = true;
+
+    document.addEventListener("DOMContentLoaded", async () => {  // only set first track, not auto-play
+      accountBackdrop.style.pointerEvents = "none";
+
+      if (musicPlaylist.length > 0) {
+        setTrack(0);
+        musicNote.textContent = "Ready: Press speaker button to start";
+      } else {
+        musicNote.textContent = "No music tracks configured";
+      }
+
+      await handleRecoveryCallback();
+      await syncAuthStateUI();
+    });
 
     function setStatus(el, msg, tone = "muted") {
       el.className = tone;
