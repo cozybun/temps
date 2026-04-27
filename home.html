@@ -344,6 +344,11 @@
       <div id="restore-status" class="muted" aria-live="polite"></div>
     </div>
 
+    <div class="field">
+      <label for="music-volume"> Music volume: <span id="music-volume-label"> 50% </span></label>
+      <input id="music-volume" type="range" min="0" max="1" step="0.25" value="0.5" />
+    </div>
+
     <div class="daily-button-wrap">
       <a id="daily-button" href="daily" aria-label="Go to Daily"> Go to Daily </a>
     </div>
@@ -364,10 +369,10 @@
   <!-- Account settings popup -->
   <div id="account-backdrop" aria-live="polite">
     <div id="account-panel" class="account-wrap" role="dialog" aria-modal="true" aria-labelledby="account-title">
-      <h3 id="account-title">Account Settings</h3>
+      <h3 id="account-title"> Account Settings </h3>
 
       <div class="field">
-        <label for="account-username">Username</label>
+        <label for="account-username"> Username </label>
         <input id="account-username" type="text" autocomplete="nickname" maxlength="20" placeholder="My username" />
       </div>
 
@@ -390,11 +395,6 @@
 
   <!-- Background music player (no controls visible) -->
   <audio id="bgMusic" preload="auto" aria-label="Background music"></audio>
-
-  <div class="field">
-    <label for="music-volume"> Music volume: <span id="music-volume-label"> 50% </span></label>
-    <input id="music-volume" type="range" min="0" max="1" step="0.25" value="0.5" />
-  </div>
 
   <script>
     const SUPABASE_URL = 'https://ckyqknlxmjqlkqnxhgef.supabase.co';
