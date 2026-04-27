@@ -1539,10 +1539,23 @@ async function buildDailyGrid() {
       (prevGuess.high !== undefined || prevGuess.low !== undefined);
 
     const localNow = getTzDate(cityTz);
-    const cutoff = new Date(localNow.getTime());
-    cutoff.setUTCHours(12, 0, 0, 0);
+    const parts = new Intl.DateTimeFormat("en-US", {  // compute current date & hour in city
+      timeZone: cityTz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      hour12: false,
+    }).formatToParts(localNow).reduce((acc, p) => {
+      if (p.type !== "literal") acc[p.type] = p.value;
+      return acc;
+    }, {});
+    
+    const cityDate = `${parts.year}-${parts.month}-${parts.day}`;
+    const cityHour = Number(parts.hour);
 
-    const isPastCutoff = forecastDay === "today" && localNow >= cutoff;
+    const isPastCutoff = forecastDay === "today" &&  // lock all cities for today when past PT noon
+      (PTNow >= PTCutoff || forecastDate < cityDate || (forecastDate === cityDate && cityHour >= 12));  // lock city if selected date is earlier than current date
     const forecastText = cityHasSavedForecast
       ? `My current forecast: H ${formatForecastValue(prevGuess.high)} / L ${formatForecastValue(prevGuess.low)}`
       : "Awaiting my forecast";
@@ -1871,7 +1884,7 @@ async function handleDailySubmit(e) {
     if (forecastDay === "today") {
       const localNow = getTzDate(city.timezone || "UTC");
       const cutoff = new Date(localNow.getTime());
-      cutoff.setUTCHours(12, 0, 0, 0);  // noon local cutoff
+      cutoff.setUTCHours(12, 0, 0, 0);  // noon local cutoff for each city
       if (localNow >= cutoff) {
         isLocked = true;
       }
@@ -2118,7 +2131,7 @@ async function handleHourlySubmit(e) {
   });
 
   if (invalidInputs.length) {
-    setStatus('<span style="color:red;"> Invalid input(s), please enter integers </span>');
+    setStatus('<span style="color:red;"> Invalid input(s), please enter numeric values </span>');
     return;
   }
 
