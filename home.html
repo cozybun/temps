@@ -440,7 +440,7 @@
       { title: "Stone Whispers", src: "audio/7_stone_whispers.flac" },
       { title: "Neon Spores", src: "audio/8_neon_spores.flac" },
       { title: "Infernal Heartbeat", src: "audio/9_infernal_heartbeat.flac" },
-      { title: "Apex Confrontation", src: "audio/10_apex_confrontation.mp3" },
+      { title: "Apex Confrontation", src: "audio/10_apex_confrontation.mp3" }
     ];
     const bgMusic = document.getElementById("bgMusic");
     const musicNote = document.getElementById("music-note");
@@ -451,6 +451,11 @@
     const musicVolumeLabel = document.getElementById("music-volume-label");
 
     const startMusicBtn = document.getElementById("start-music-btn");
+
+    bgMusic.addEventListener("loadeddata", () => {
+      const track = musicPlaylist[musicTrackIndex];
+      musicNote.textContent = `Loaded: ${track?.title || "track"} (${track?.src || ""})`;
+    });
 
     function startMusicAfterUserGesture() {
       if (!musicStarted) playCurrentTrack();
