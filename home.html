@@ -449,6 +449,24 @@
 
     const musicVolume = document.getElementById("music-volume");
     const musicVolumeLabel = document.getElementById("music-volume-label");
+
+    const startMusicBtn = document.getElementById("start-music-btn");
+
+    function startMusicAfterUserGesture() {
+      if (!musicStarted) playCurrentTrack();
+      if (musicStarted && startMusicBtn) startMusicBtn.style.display = "none";
+    }
+    
+    if (startMusicBtn) {
+      startMusicBtn.addEventListener("click", async () => {
+        const ok = await playCurrentTrack();
+        if (ok) startMusicBtn.style.display = "none";
+      });
+    }
+    
+    ["pointerdown", "touchstart", "click", "keydown"].forEach((evt) => {
+      document.addEventListener(evt, startMusicAfterUserGesture, { once: true });
+    });
     
     bgMusic.volume = 0.5;
     bgMusic.playsInline = true;
