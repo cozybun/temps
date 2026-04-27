@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐰 Temps With Friends 🔮</title>
+  <title> 🐰 Temps With Friends 🔮 </title>
   <style>
     :root{
       --bg: #faf7ff;
@@ -18,7 +18,6 @@
       --media-text: #9b73ff;
       --media-small: #8f6dff;
       --media-muted: #7759d1;
-      --brand purple: #BF40BF;
     }
 
     * { box-sizing: border-box; }
@@ -66,16 +65,19 @@
       border-radius: 12px;
       background: var(--media-bg);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
       padding: 1rem;
       color: var(--media-text);
       font-weight: 600;
+      gap: 0.75rem;
     }
 
     #placeholderText {
       color: var(--media-small);
+      font-weight: 600;
     }
 
     .learn-copy {
@@ -123,9 +125,14 @@
     }
 
     .muted {
-      text-align: center;
-      font-size: 0.9rem;
       color: #9ca3af;
+      margin: 0;
+      line-height: 1.5;
+      max-width: 36rem;
+    }
+
+    .status-note {
+      display: block;
       margin-top: 0.25rem;
     }
 
@@ -145,15 +152,18 @@
 </head>
 <body>
   <main class="page">
-    <h1>🐰 Temps With Friends 🔮</h1>
+    <h1> 🐰 Temps With Friends 🔮 </h1>
     <h2> Guess Temps, Help Buns, Cozy Up </h2>
 
     <section class="media-slot" id="mediaSlot" aria-label="Media or info area">
-      <small id="placeholderText">Image / animation placeholder</small>
+      <small id="placeholderText" class="hidden">Image / animation placeholder</small>
 
+      <div class="muted status-note" id="alphaNotice">
+        <p> Hello visitor! This game is currently in Private Alpha. Thank you for testing it with me. <br>
+        <br> The solo dev is polishing and pushing updates. Please be patient and stay tuned! 😊 </p>
+      </div>
       <div id="learnPanel" class="learn-copy">
-        <p>
-          Save daily and hourly temperature forecasts for many cities and get shareable scores of your accuracy. <br>
+        <p> Save daily and hourly temperature forecasts for many cities and get shareable scores of your accuracy. <br>
           <br> Play this game to compete socially, win cute prizes, and build accurate forecasting skills. <br>
           <br> Click <strong> Try </strong> to make a 1st forecast & start your cozy Temps journey :)
         </p>
@@ -161,13 +171,8 @@
     </section>
 
     <div class="actions">
-      <button type="button" id="learnBtn"> About </button>
-      <button type="button" id="tryBtn"> Try </button>
-    </div>
-
-    <div class="muted">
-      <p> Hello visitor! This game is in Private Alpha now. Thank you for testing it with me. </p>
-      <p> The solo dev is polishing and pushing updates. Please be patient and stay tuned! 😊 </p>
+      <button type="button" id="learnBtn">About</button>
+      <button type="button" id="tryBtn">Try</button>
     </div>
   </main>
 
@@ -176,19 +181,20 @@
     const tryBtn = document.getElementById("tryBtn");
     const learnPanel = document.getElementById("learnPanel");
     const placeholderText = document.getElementById("placeholderText");
+    const alphaNotice = document.getElementById("alphaNotice");
 
-    // Toggle text inside placeholder area with Learn button
     learnBtn.addEventListener("click", () => {
       const isShowing = learnPanel.classList.toggle("visible");
       placeholderText.classList.toggle("hidden", isShowing);
-      learnBtn.textContent = isShowing ? "Hide Info" : "Learn";
+      alphaNotice.classList.toggle("hidden", isShowing);
+      learnBtn.textContent = isShowing ? "Hide About" : "About";
     });
 
-    // Show same centered text in the placeholder area on Try click
     tryBtn.addEventListener("click", () => {
-      learnPanel.classList.add("visible");
+      learnPanel.classList.remove("visible");
       placeholderText.classList.add("hidden");
-      learnBtn.textContent = "Learn";  // reset button label state
+      alphaNotice.classList.remove("hidden");
+      learnBtn.textContent = "About";
 
       setTimeout(() => {
         window.location.href = "home";
