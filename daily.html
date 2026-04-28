@@ -131,9 +131,17 @@
   </style>
 </head>
 <body>
-  <div style="text-align:center; margin:1rem 0;">
-    <a id="goToHourlyBtn" href="hourly"> Go to Hourly Forecasts </a>
-  </div>
+  <header class="daily-navbar" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;max-width:900px;margin:0.75rem auto;padding:0 0.75rem;flex-wrap:wrap;">
+    <a id="goToHourlyBtn" href="hourly" style="margin:0;"> Go to Hourly </a>
+
+    <div style="display:flex;align-items:center;gap:0.45rem;">
+      <audio id="bgMusic" preload="none"></audio>
+      <button id="musicToggle" type="button" style="background:transparent;border:1px solid #888;border-radius:999px;padding:0.35rem 0.6rem;font-size:1rem;line-height:1;cursor:pointer;">
+        🔇
+      </button>
+      <div id="musicStatus" style="font-size:12px;opacity:0.8;white-space:nowrap;display:none;"></div>
+    </div>
+  </header>
 
   <input id="forecastType" type="hidden" value="daily" />
 
@@ -195,16 +203,17 @@
     </div>
 
     <div style="text-align:center; margin: 0;">
-      <button type="submit" id="dailySaveBtn"> Save Daily Forecasts 💾 </button>
+      <button type="submit" id="dailySaveBtn"> 💾 Save Daily Forecasts </button>
     </div>
   </form>
 
   <div id="status" style="text-align:center; margin-top:0.8rem; min-height:1.3rem;"></div>
 
   <div style="text-align:center; margin: 0;">
-    <a id="dailyScoreBtn" href="score"> 🐰 View My Score </a>
+    <a id="dailyScoreBtn" href="score"> 📈 View My Score </a>
   </div>
   
+  <script src="music.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
