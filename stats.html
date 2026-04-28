@@ -299,7 +299,7 @@
       const d = new Date(raw);
       if (Number.isNaN(d.getTime())) return "—";
     
-      const day = String(d.getDate()).padStart(2, "0");
+      const day = d.getDate();
       const month = MONTH_NAMES[d.getMonth()] || "";
       const year = d.getFullYear();
     
