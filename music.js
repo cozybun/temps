@@ -28,20 +28,29 @@
     }
   })();
 
+  const clampIndex = (i) => ((i % musicPlaylist.length) + musicPlaylist.length) % musicPlaylist.length;
+
   let trackIndex = Number.isInteger(saved.trackIndex) ? saved.trackIndex : 0;
   let musicEnabled = !!saved.enabled;
   let hasUserGesture = false;
 
-  const clampIndex = (i) => ((i % musicPlaylist.length) + musicPlaylist.length) % musicPlaylist.length;
+  const savedTrackIndex = Number.isInteger(saved.trackIndex) ? saved.trackIndex : 0;
+  const savedTime = Number.isFinite(saved.time) ? saved.time : 0;
 
-  const setTrack = (i) => {
+  const setTrack = (i, restoreProgress = false) => {
     trackIndex = clampIndex(i);
     const track = musicPlaylist[trackIndex];
     if (!track || !track.src) return;
+
     audio.src = track.src;
     audio.volume = 0.5;
     audio.load();
-    if (Number.isFinite(saved.time) && saved.time > 0) audio.currentTime = saved.time;
+
+    if (restoreProgress && trackIndex === clampIndex(savedTrackIndex) && savedTime > 0) {
+      audio.currentTime = savedTime;
+    } else {
+      audio.currentTime = 0;
+    }
   };
 
   const saveState = () => {
@@ -59,9 +68,7 @@
     if (!toggleBtn) return;
     toggleBtn.textContent = musicEnabled ? "🔊" : "🔇";
     toggleBtn.setAttribute("aria-pressed", String(musicEnabled));
-    if (status) {
-      status.textContent = musicEnabled ? `Playing: ${trackIndex + 1}` : "Music Off";
-    }
+    if (status) status.textContent = musicEnabled ? `Playing: ${trackIndex + 1}` : "Music Off";
   };
 
   const tryPlay = async () => {
@@ -84,15 +91,11 @@
     }
   };
 
-  setTrack(trackIndex);
+  setTrack(trackIndex, true);  // set source on load
   updateUi();
 
-  if (musicEnabled) {
-    onFirstGesture();
-  }
-
   audio.addEventListener("ended", () => {
-    setTrack(trackIndex + 1);
+    setTrack(trackIndex + 1, false);  // avoid stale time carryover to next track
     saveState();
     tryPlay();
   });
