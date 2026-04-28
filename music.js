@@ -32,11 +32,11 @@
   let musicEnabled = !!saved.enabled;
   let hasUserGesture = false;
 
-  const clampIndex = (i) => ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+  const clampIndex = (i) => ((i % musicPlaylist.length) + musicPlaylist.length) % musicPlaylist.length;
 
   const setTrack = (i) => {
     trackIndex = clampIndex(i);
-    audio.src = TRACKS[trackIndex];
+    audio.src = musicPlaylist[trackIndex];
     if (Number.isFinite(saved.time) && saved.time > 0) audio.currentTime = saved.time;
   };
 
