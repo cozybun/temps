@@ -292,13 +292,15 @@
       return "Keep cozy — momentum grows with regular forecasts and calm adjustments. 🌙";
     }
 
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+    
     function formatDate(raw) {
       if (!raw) return "—";
       const d = new Date(raw);
       if (Number.isNaN(d.getTime())) return "—";
     
       const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const month = MONTH_NAMES[d.getMonth()] || "";
       const year = d.getFullYear();
     
       return `${day} ${month} ${year}`;
