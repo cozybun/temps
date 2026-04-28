@@ -39,6 +39,7 @@
     const track = musicPlaylist[trackIndex];
     if (!track || !track.src) return;
     audio.src = track.src;
+    audio.volume = 0.5;
     audio.load();
     if (Number.isFinite(saved.time) && saved.time > 0) audio.currentTime = saved.time;
   };
