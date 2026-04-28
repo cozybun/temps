@@ -53,7 +53,7 @@
 
   const updateUi = () => {
     if (!toggleBtn) return;
-    toggleBtn.textContent = musicEnabled ? "🔊 Music: On" : "🔇 Music: Off";
+    toggleBtn.textContent = musicEnabled ? "🔊" : "🔇";
     toggleBtn.setAttribute("aria-pressed", String(musicEnabled));
     if (status) {
       status.textContent = musicEnabled ? `Playing: ${trackIndex + 1}` : "Music off";
