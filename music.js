@@ -16,7 +16,7 @@
 
   const audio = document.getElementById("bgMusic");
   const toggleBtn = document.getElementById("musicToggle");
-  const status = document.getElementById("musicStatus"); // optional
+  const status = document.getElementById("musicStatus");
 
   if (!audio) return;
 
@@ -36,7 +36,10 @@
 
   const setTrack = (i) => {
     trackIndex = clampIndex(i);
-    audio.src = musicPlaylist[trackIndex];
+    const track = musicPlaylist[trackIndex];
+    if (!track || !track.src) return;
+    audio.src = track.src;
+    audio.load();
     if (Number.isFinite(saved.time) && saved.time > 0) audio.currentTime = saved.time;
   };
 
@@ -56,7 +59,7 @@
     toggleBtn.textContent = musicEnabled ? "🔊" : "🔇";
     toggleBtn.setAttribute("aria-pressed", String(musicEnabled));
     if (status) {
-      status.textContent = musicEnabled ? `Playing: ${trackIndex + 1}` : "Music off";
+      status.textContent = musicEnabled ? `Playing: ${trackIndex + 1}` : "Music Off";
     }
   };
 
@@ -64,7 +67,13 @@
     if (!musicEnabled || !hasUserGesture) return;
     try {
       await audio.play();
-    } catch {}  // autoplay blocked until user gesture
+      if (status) status.textContent = "Playing";
+    } catch (err) {
+      console.error("Playback failed:", err);
+      musicEnabled = false;
+      if (status) status.textContent = "Tap again to enable";
+      updateUi();
+    }
   };
 
   const onFirstGesture = () => {
@@ -78,7 +87,7 @@
   updateUi();
 
   if (musicEnabled) {
-    onFirstGesture();  // will start on first click due to browser rules
+    onFirstGesture();
   }
 
   audio.addEventListener("ended", () => {
@@ -89,7 +98,7 @@
 
   audio.addEventListener("timeupdate", saveState);
 
-  if (toggleBtn) {  // optional if a control button exists
+  if (toggleBtn) {
     toggleBtn.addEventListener("click", async () => {
       musicEnabled = !musicEnabled;
       hasUserGesture = true;
@@ -97,14 +106,14 @@
         await tryPlay();
       } else {
         audio.pause();
+        if (status) status.textContent = "Music Off";
       }
       saveState();
       updateUi();
     });
   }
 
-  document.addEventListener("pointerdown", onFirstGesture, { once: true, capture: true });  // resume on next page after interaction
+  document.addEventListener("pointerdown", onFirstGesture, { once: true, capture: true });
   document.addEventListener("keydown", onFirstGesture, { once: true, capture: true });
-
   window.addEventListener("beforeunload", saveState);
 })();
